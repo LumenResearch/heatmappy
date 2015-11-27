@@ -1,48 +1,40 @@
 from abc import ABCMeta, abstractmethod
 import io
+import os
 import random
 
-import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import numpy
 from PIL import Image
 from PySide import QtCore, QtGui
 
 
-class ColourHeatmapper:
-    cdict = {'red': ((0.0, 1.0, 1.0),
-                     (0.2, 1.0, 1.0),
-                     (0.4, 0.2, 0.2),
-                     (0.7, 0.0, 0.0),
-                     (1.0, 0.0, 0.0)),
-
-             'green': ((0.0, 0.15, 0.15),
-                       (0.2, 1.0, 1.0),
-                       (0.4, 1.0, 1.0),
-                       (0.7, 0.2, 0.2),
-                       (1.0, 0.0, 0.0)),
-
-             'blue': ((0.0, 0.15, 0.15),
-                      (0.2, 0.0, 0.0),
-                      (0.4, 0.0, 0.0),
-                      (0.7, 0.78, 0.78),
-                      (1.0, 0.0, 0.0)),
-
-             'alpha': ((0.0, 1.0, 1.0),
-                       (0.7, 1.0, 1.0),
-                       (0.9, 0.0, 0.0),
-                       (1.0, 0.0, 0.0))}
-
-    def __init__(self, point_diameter=50, alpha_strength=20, opacity=0.65,
+class Heatmapper:
+    def __init__(self, point_diameter=50, alpha_strength=0.2, opacity=0.65,
+                 colours='default',
                  grey_heatmapper='PySide'):
         """
-        :param opacity: opacity of the generated heatmap overlay
+        :param opacity: opacity (between 0 and 1) of the generated heatmap overlay
+        :param colours: Either 'default', 'reveal',
+                        OR the path to horizontal image which will be converted to a scale
+                        OR a matplotlib LinearSegmentedColorMap instance.
         :param grey_heatmapper: Required to draw points on an image as a greyscale
                                 heatmap. If not using the default, this must be an object
                                 which fulfils the GreyScaleHeatmap interface.
         """
 
         self._opacity = opacity
+
+        if isinstance(colours, LinearSegmentedColormap):
+            self.cmap = colours
+        else:
+            local_file = lambda file: os.path.join(os.path.dirname(__file__), file)
+            files = {
+                'default': local_file('default.png'),
+                'reveal': local_file('reveal.png'),
+            }
+            scale_path = files.get(colours) or colours
+            self.cmap = self._cmap_from_image_path(scale_path)
 
         if grey_heatmapper == 'PySide':
             self.grey_heatmapper = PySideGreyHeatmapper(point_diameter, alpha_strength)
@@ -66,6 +58,14 @@ class ColourHeatmapper:
         background = Image.open(base_path) if base_path else base_img
         return Image.alpha_composite(background.convert('RGBA'), heatmap)
 
+    @staticmethod
+    def _cmap_from_image_path(img_path):
+        img = Image.open(img_path)
+        img = img.resize((256, img.height))
+        colours = (img.getpixel((x, 0)) for x in range(256))
+        colours = [(r/255, g/255, b/255, a/255) for (r, g, b, a) in colours]
+        return LinearSegmentedColormap.from_list('from_image', colours)
+
     def heatmap_on_base_path(self, points, base_path):
         width, height = Image.open(base_path).size
         return self.heatmap(width, height, points, base_path=base_path)
@@ -76,10 +76,8 @@ class ColourHeatmapper:
 
     def _colourise(self, img):
         """ maps values in greyscale image to colours """
-        heat_colour_map = LinearSegmentedColormap('heatColourMap', self.cdict)
-        cmap = plt.get_cmap(heat_colour_map)
         arr = numpy.array(img)
-        rgba_img = cmap(arr, bytes=True)
+        rgba_img = self.cmap(arr, bytes=True)
         return Image.fromarray(rgba_img)
 
     @staticmethod
@@ -110,7 +108,7 @@ class GreyHeatMapper(metaclass=ABCMeta):
 class PySideGreyHeatmapper(GreyHeatMapper):
     def __init__(self, point_diameter, point_strength):
         super().__init__(point_diameter, point_strength)
-        self.point_strength = int((point_strength / 100) * 255)
+        self.point_strength = int(point_strength * 255)
 
     def heatmap(self, width, height, points):
         base_image = QtGui.QImage(width, height, QtGui.QImage.Format_ARGB32)
@@ -156,7 +154,7 @@ class PySideGreyHeatmapper(GreyHeatMapper):
 if __name__ == '__main__':
     randpoint = lambda max_x, max_y: (random.randint(0, max_x), random.randint(0, max_y))
     example_img = Image.open('home-cat.jpg')
-    example_points = (randpoint(*example_img.size) for _ in range(200))
+    example_points = (randpoint(*example_img.size) for _ in range(300))
 
-    heatmapper = ColourHeatmapper()
+    heatmapper = Heatmapper(colours='reveal')
     heatmapper.heatmap_on_img(example_points, example_img).save('drawn.png')
