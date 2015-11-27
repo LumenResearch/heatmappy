@@ -1,5 +1,5 @@
 # heatmap.py
-Draw image heat maps in python
+Draw image heatmaps in python
 
 # Requirements
 
@@ -22,7 +22,7 @@ example_img_path = 'cat.jpg'
 example_img = Image.open(example_img_path)
 ```
 
-Draw a basic heat map on the PIL image object:
+Draw a basic heatmap on the PIL image object:
 
 ```python
 heatmapper = Heatmapper(colours='reveal')
@@ -46,7 +46,7 @@ The following options are available (shown with their default values):
 heatmapper = Heatmapper(
     point_diameter=50,  # the size of each point to be drawn
     alpha_strength=0.2,  # the strength, between 0 and 1, of each point to be drawn
-    opacity=0.65,  # the opacity of the heat map later
+    opacity=0.65,  # the opacity of the heatmap later
     colours='default',  # 'default' or 'reveal'
                         # OR a matplotlib LinearSegmentedColorMap object 
                         # OR the path to a horizontal scale image (like that found at src/default.png)
