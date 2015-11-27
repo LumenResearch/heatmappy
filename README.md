@@ -1,6 +1,10 @@
 # heatmap.py
 Draw image heatmaps in python
 
+# Install
+
+Soon to be available through pip.
+
 # Requirements
 
 - matplotlib
@@ -29,6 +33,7 @@ heatmapper = Heatmapper(colours='reveal')
 heatmap = heatmapper.heatmap_on_img(example_points, example_img)
 heatmap.save('heatmap.png')
 ```
+![default cat](/examples/default-cat.png?raw=true)
 
 Draw a reveal heatmap, given the image path:
 
@@ -37,6 +42,7 @@ heatmapper = Heatmapper(opacity=1, colours='reveal')
 heatmap = heatmapper.heatmap_on_base_path(example_points, example_img)
 heatmap.save('heatmap.png')
 ```
+![reveal cat](/examples/reveal-cat.png?raw=true)
 
 # Heatmap config
 
