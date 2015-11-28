@@ -130,7 +130,7 @@ class PySideGreyHeatmapper(GreyHeatMapper):
         painter.end()
 
     def _paint_point(self, painter, x, y):
-        grad = QtGui.QRadialGradient(0, y, self.dm/2)
+        grad = QtGui.QRadialGradient(x, y, self.dm/2)
         grad.setColorAt(0, QtGui.QColor(0, 0, 0, max(self.point_strength, 0)))
         grad.setColorAt(1, QtGui.QColor(0, 0, 0, 0))
         brush = QtGui.QBrush(grad)
