@@ -38,7 +38,7 @@ heatmap.save('heatmap.png')
 Draw a reveal heatmap, given the image path:
 
 ```python
-heatmapper = Heatmapper(opacity=1, colours='reveal')
+heatmapper = Heatmapper(opacity=0.9, colours='reveal')
 heatmap = heatmapper.heatmap_on_base_path(example_points, example_img)
 heatmap.save('heatmap.png')
 ```
@@ -60,3 +60,14 @@ heatmapper = Heatmapper(
                               # Currently only a PySide implementation is available
 )
 ```
+
+
+# Coming soon
+
+- Alternatives to PySide for drawing points
+- Video heatmaps
+
+
+# License
+
+MIT License.
