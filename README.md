@@ -55,16 +55,27 @@ heatmapper = Heatmapper(
     opacity=0.65,  # the opacity of the heatmap layer
     colours='default',  # 'default' or 'reveal'
                         # OR a matplotlib LinearSegmentedColorMap object 
-                        # OR the path to a horizontal scale image (like that found at src/default.png)
+                        # OR the path to a horizontal scale image
     grey_heatmapper='PIL'  # The object responsible for drawing the points
                            # Pillow used by default, 'PySide' option available if installed
 )
 ```
 
+## Provided colour schemes
+
+### default
+
+![reveal cat](/src/assets/default.png?raw=true)
+
+### reveal
+
+![reveal cat](/src/assets/reveal.png?raw=true)
+
 
 # Coming soon
 
 - Video heatmaps
+- Can specify different point size for each point plotted.
 
 
 # License
