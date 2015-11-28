@@ -39,7 +39,7 @@ Draw a reveal heatmap, given the image path:
 
 ```python
 heatmapper = Heatmapper(opacity=0.9, colours='reveal')
-heatmap = heatmapper.heatmap_on_img_path(example_points, example_img)
+heatmap = heatmapper.heatmap_on_img_path(example_points, example_img_path)
 heatmap.save('heatmap.png')
 ```
 ![reveal cat](/examples/reveal-cat.png?raw=true)
