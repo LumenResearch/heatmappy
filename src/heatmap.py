@@ -49,7 +49,7 @@ class Heatmapper:
                  with a transparent background.
         """
         heatmap = self.grey_heatmapper.heatmap(width, height, points)
-        heatmap = self._colourise(heatmap)
+        heatmap = self._colourised(heatmap)
         heatmap = self._to_opacity(heatmap, self._opacity)
 
         if not (base_path or base_img):
@@ -58,15 +58,7 @@ class Heatmapper:
         background = Image.open(base_path) if base_path else base_img
         return Image.alpha_composite(background.convert('RGBA'), heatmap)
 
-    @staticmethod
-    def _cmap_from_image_path(img_path):
-        img = Image.open(img_path)
-        img = img.resize((256, img.height))
-        colours = (img.getpixel((x, 0)) for x in range(256))
-        colours = [(r/255, g/255, b/255, a/255) for (r, g, b, a) in colours]
-        return LinearSegmentedColormap.from_list('from_image', colours)
-
-    def heatmap_on_base_path(self, points, base_path):
+    def heatmap_on_img_path(self, points, base_path):
         width, height = Image.open(base_path).size
         return self.heatmap(width, height, points, base_path=base_path)
 
@@ -74,7 +66,7 @@ class Heatmapper:
         width, height = img.size
         return self.heatmap(width, height, points, base_img=img)
 
-    def _colourise(self, img):
+    def _colourised(self, img):
         """ maps values in greyscale image to colours """
         arr = numpy.array(img)
         rgba_img = self.cmap(arr, bytes=True)
@@ -87,6 +79,14 @@ class Heatmapper:
         alpha = alpha.point(lambda p: int(p * opacity))
         img.putalpha(alpha)
         return img
+
+    @staticmethod
+    def _cmap_from_image_path(img_path):
+        img = Image.open(img_path)
+        img = img.resize((256, img.height))
+        colours = (img.getpixel((x, 0)) for x in range(256))
+        colours = [(r/255, g/255, b/255, a/255) for (r, g, b, a) in colours]
+        return LinearSegmentedColormap.from_list('from_image', colours)
 
 
 class GreyHeatMapper(metaclass=ABCMeta):
@@ -120,18 +120,17 @@ class PySideGreyHeatmapper(GreyHeatMapper):
     def _paint_points(self, img, points):
         painter = QtGui.QPainter(img)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        for point in points:
-            self._paint_point(point, painter)
-        painter.end()
 
-    def _paint_point(self, point, painter):
         pen = QtGui.QPen(QtGui.QColor(0, 0, 0, 0))
         pen.setWidth(0)
         painter.setPen(pen)
 
-        x, y = point
+        for point in points:
+            self._paint_point(painter, *point)
+        painter.end()
 
-        grad = QtGui.QRadialGradient(x, y, self.dm/2)
+    def _paint_point(self, painter, x, y):
+        grad = QtGui.QRadialGradient(0, y, self.dm/2)
         grad.setColorAt(0, QtGui.QColor(0, 0, 0, max(self.point_strength, 0)))
         grad.setColorAt(1, QtGui.QColor(0, 0, 0, 0))
         brush = QtGui.QBrush(grad)
@@ -154,7 +153,7 @@ class PySideGreyHeatmapper(GreyHeatMapper):
 if __name__ == '__main__':
     randpoint = lambda max_x, max_y: (random.randint(0, max_x), random.randint(0, max_y))
     example_img = Image.open('home-cat.jpg')
-    example_points = (randpoint(*example_img.size) for _ in range(300))
+    example_points = (randpoint(*example_img.size) for _ in range(1000))
 
-    heatmapper = Heatmapper(colours='reveal')
+    heatmapper = Heatmapper(colours='default')
     heatmapper.heatmap_on_img(example_points, example_img).save('drawn.png')
