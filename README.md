@@ -65,11 +65,11 @@ heatmapper = Heatmapper(
 
 ### default
 
-![reveal cat](/src/assets/default.png?raw=true)
+![default colour scheme](/src/assets/default.png?raw=true)
 
 ### reveal
 
-![reveal cat](/src/assets/reveal.png?raw=true)
+![reveal colour scheme](/src/assets/reveal.png?raw=true)
 
 
 # Coming soon
