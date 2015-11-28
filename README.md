@@ -10,7 +10,7 @@ Soon to be available through pip.
 - matplotlib
 - numpy
 - Pillow
-- PySide (soon to be optional)
+- PySide (optional: up to ~20% faster than Pillow alone)
 
 # Examples
 
@@ -56,15 +56,14 @@ heatmapper = Heatmapper(
     colours='default',  # 'default' or 'reveal'
                         # OR a matplotlib LinearSegmentedColorMap object 
                         # OR the path to a horizontal scale image (like that found at src/default.png)
-    grey_heatmapper='PySide'  # The object responsible for drawing the points
-                              # Currently only a PySide implementation is available
+    grey_heatmapper='PIL'  # The object responsible for drawing the points
+                           # Pillow used by default, 'PySide' option available if installed
 )
 ```
 
 
 # Coming soon
 
-- Alternatives to PySide for drawing points
 - Video heatmaps
 
 
