@@ -6,13 +6,29 @@ import random
 from matplotlib.colors import LinearSegmentedColormap
 import numpy
 from PIL import Image
-from PySide import QtCore, QtGui
+
+try:
+    from PySide import QtCore, QtGui
+except ImportError:
+    pass
+
+
+def _local_file(filename):
+    return os.path.join(os.path.dirname(__file__), filename)
+
+
+def _img_to_opacity(img, opacity):
+        img = img.copy()
+        alpha = img.split()[3]
+        alpha = alpha.point(lambda p: int(p * opacity))
+        img.putalpha(alpha)
+        return img
 
 
 class Heatmapper:
-    def __init__(self, point_diameter=50, alpha_strength=0.2, opacity=0.65,
+    def __init__(self, point_diameter=50, point_strength=0.2, opacity=0.65,
                  colours='default',
-                 grey_heatmapper='PySide'):
+                 grey_heatmapper='PIL'):
         """
         :param opacity: opacity (between 0 and 1) of the generated heatmap overlay
         :param colours: Either 'default', 'reveal',
@@ -20,7 +36,7 @@ class Heatmapper:
                         OR a matplotlib LinearSegmentedColorMap instance.
         :param grey_heatmapper: Required to draw points on an image as a greyscale
                                 heatmap. If not using the default, this must be an object
-                                which fulfils the GreyScaleHeatmap interface.
+                                which fulfils the GreyHeatmapper interface.
         """
 
         self._opacity = opacity
@@ -28,16 +44,17 @@ class Heatmapper:
         if isinstance(colours, LinearSegmentedColormap):
             self.cmap = colours
         else:
-            local_file = lambda file: os.path.join(os.path.dirname(__file__), file)
             files = {
-                'default': local_file('default.png'),
-                'reveal': local_file('reveal.png'),
+                'default': _local_file('default.png'),
+                'reveal': _local_file('reveal.png'),
             }
             scale_path = files.get(colours) or colours
             self.cmap = self._cmap_from_image_path(scale_path)
 
-        if grey_heatmapper == 'PySide':
-            self.grey_heatmapper = PySideGreyHeatmapper(point_diameter, alpha_strength)
+        if grey_heatmapper == 'PIL':
+            self.grey_heatmapper = PILGreyHeatmapper(point_diameter, point_strength)
+        elif grey_heatmapper == 'PySide':
+            self.grey_heatmapper = PySideGreyHeatmapper(point_diameter, point_strength)
         else:
             self.grey_heatmapper = grey_heatmapper
 
@@ -50,7 +67,7 @@ class Heatmapper:
         """
         heatmap = self.grey_heatmapper.heatmap(width, height, points)
         heatmap = self._colourised(heatmap)
-        heatmap = self._to_opacity(heatmap, self._opacity)
+        heatmap = _img_to_opacity(heatmap, self._opacity)
 
         if not (base_path or base_img):
             return heatmap
@@ -72,13 +89,6 @@ class Heatmapper:
         rgba_img = self.cmap(arr, bytes=True)
         return Image.fromarray(rgba_img)
 
-    @staticmethod
-    def _to_opacity(img, opacity):
-        img = img.copy()
-        alpha = img.split()[3]
-        alpha = alpha.point(lambda p: int(p * opacity))
-        img.putalpha(alpha)
-        return img
 
     @staticmethod
     def _cmap_from_image_path(img_path):
@@ -150,10 +160,28 @@ class PySideGreyHeatmapper(GreyHeatMapper):
         return Image.open(bytes_io)
 
 
+class PILGreyHeatmapper(GreyHeatMapper):
+    def __init__(self, point_diameter, point_strength):
+        super().__init__(point_diameter, point_strength)
+
+    def heatmap(self, width, height, points):
+        heat = Image.new('L', (width, height), color=255)
+
+        dot = (Image.open('450pxdot.png').copy()
+                    .resize((self.dm, self.dm), resample=Image.ANTIALIAS))
+        dot = _img_to_opacity(dot, self.point_strength)
+
+        for x, y in points:
+            x, y = int(x - self.dm/2), int(y - self.dm/2)
+            heat.paste(dot, (x, y), dot)
+
+        return heat
+
+
 if __name__ == '__main__':
     randpoint = lambda max_x, max_y: (random.randint(0, max_x), random.randint(0, max_y))
-    example_img = Image.open('home-cat.jpg')
-    example_points = (randpoint(*example_img.size) for _ in range(1000))
+    example_img = Image.open('cat.jpg')
+    example_points = (randpoint(*example_img.size) for _ in range(500))
 
     heatmapper = Heatmapper(colours='default')
-    heatmapper.heatmap_on_img(example_points, example_img).save('drawn.png')
+    heatmapper.heatmap_on_img(example_points, example_img).save('drawn4.png')
