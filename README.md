@@ -29,7 +29,7 @@ example_img = Image.open(example_img_path)
 Draw a basic heatmap on the PIL image object:
 
 ```python
-heatmapper = Heatmapper(colours='reveal')
+heatmapper = Heatmapper()
 heatmap = heatmapper.heatmap_on_img(example_points, example_img)
 heatmap.save('heatmap.png')
 ```
