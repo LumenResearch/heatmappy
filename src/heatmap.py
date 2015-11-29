@@ -13,8 +13,8 @@ except ImportError:
     pass
 
 
-def _local_file(filename):
-    return os.path.join(os.path.dirname(__file__), filename)
+def _asset_file(filename):
+    return os.path.join(os.path.dirname(__file__), 'assets', filename)
 
 
 def _img_to_opacity(img, opacity):
@@ -45,8 +45,8 @@ class Heatmapper:
             self.cmap = colours
         else:
             files = {
-                'default': _local_file('default.png'),
-                'reveal': _local_file('reveal.png'),
+                'default': _asset_file('default.png'),
+                'reveal': _asset_file('reveal.png'),
             }
             scale_path = files.get(colours) or colours
             self.cmap = self._cmap_from_image_path(scale_path)
@@ -167,7 +167,7 @@ class PILGreyHeatmapper(GreyHeatMapper):
     def heatmap(self, width, height, points):
         heat = Image.new('L', (width, height), color=255)
 
-        dot = (Image.open('450pxdot.png').copy()
+        dot = (Image.open(_asset_file('450pxdot.png')).copy()
                     .resize((self.dm, self.dm), resample=Image.ANTIALIAS))
         dot = _img_to_opacity(dot, self.point_strength)
 
@@ -180,8 +180,8 @@ class PILGreyHeatmapper(GreyHeatMapper):
 
 if __name__ == '__main__':
     randpoint = lambda max_x, max_y: (random.randint(0, max_x), random.randint(0, max_y))
-    example_img = Image.open('cat.jpg')
+    example_img = Image.open(_asset_file('cat.jpg'))
     example_points = (randpoint(*example_img.size) for _ in range(500))
 
     heatmapper = Heatmapper(colours='default')
-    heatmapper.heatmap_on_img(example_points, example_img).save('drawn4.png')
+    heatmapper.heatmap_on_img(example_points, example_img).save('out.png')
