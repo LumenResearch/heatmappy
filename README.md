@@ -1,4 +1,4 @@
-# heatmap.py
+# heatmappy
 Draw image heatmaps in python
 
 # Install
