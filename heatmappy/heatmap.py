@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from functools import partial
 import io
 import os
 import random
@@ -13,8 +14,7 @@ except ImportError:
     pass
 
 
-def _asset_file(filename):
-    return os.path.join(os.path.dirname(__file__), 'assets', filename)
+_asset_file = partial(os.path.join, os.path.dirname(__file__), 'assets')
 
 
 def _img_to_opacity(img, opacity):

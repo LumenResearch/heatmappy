@@ -17,7 +17,7 @@ Soon to be available through pip.
 Given some points (co-ordinates) and a base image:
 
 ```python
-from heatmap import Heatmapper
+from heatmappy import Heatmapper
 
 from PIL import Image
 
