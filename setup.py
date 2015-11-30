@@ -1,13 +1,12 @@
 from setuptools import setup
 
-
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
   name = 'heatmappy',
   packages = ['heatmappy'],
-  version = '0.1.0',
+  version = '0.1.1',
   description = 'Draw image heatmaps in python',
   author = 'Lumen Research',
   author_email = 'development@lumen-research.com',
