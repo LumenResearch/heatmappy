@@ -3,7 +3,7 @@ Draw image heatmaps in python
 
 # Install
 
-Soon to be available through pip.
+`pip install heatmappy`
 
 # Requirements
 
