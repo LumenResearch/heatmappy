@@ -1,6 +1,8 @@
 # heatmappy
 Draw image heatmaps in python
 
+![newspaper heatmap](/examples/paper.png?raw=true)
+
 # Install
 
 `pip install heatmappy`
