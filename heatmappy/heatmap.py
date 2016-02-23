@@ -89,7 +89,6 @@ class Heatmapper:
         rgba_img = self.cmap(arr, bytes=True)
         return Image.fromarray(rgba_img)
 
-
     @staticmethod
     def _cmap_from_image_path(img_path):
         img = Image.open(img_path)
