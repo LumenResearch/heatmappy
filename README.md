@@ -23,7 +23,7 @@ Draw image and video heatmaps in python
 
 # Examples
 
-Given some points (co-ordinates) and a base image:
+### Given some points (co-ordinates) and a base image
 
 ```python
 from heatmappy import Heatmapper
@@ -35,7 +35,7 @@ example_img_path = 'cat.jpg'
 example_img = Image.open(example_img_path)
 ```
 
-Draw a basic heatmap on the PIL image object:
+### Draw a basic heatmap on the PIL image object
 
 ```python
 heatmapper = Heatmapper()
@@ -44,7 +44,7 @@ heatmap.save('heatmap.png')
 ```
 ![default cat](/examples/default-cat.png?raw=true)
 
-Draw a reveal heatmap, given the image path:
+### Draw a reveal heatmap, given the image path
 
 ```python
 heatmapper = Heatmapper(opacity=0.9, colours='reveal')
@@ -53,7 +53,7 @@ heatmap.save('heatmap.png')
 ```
 ![reveal cat](/examples/reveal-cat.png?raw=true)
 
-Draw a video heatmap
+### Draw a video heatmap
 
 Input points are in the form (x, y, t) where t is in milliseconds.
 
@@ -86,6 +86,10 @@ heatmapper = Heatmapper(
                         # OR the path to a horizontal scale image
     grey_heatmapper='PIL'  # The object responsible for drawing the points
                            # Pillow used by default, 'PySide' option available if installed
+)
+
+video_heatmapper = VideoHeatmapper(
+    heatmapper  # the img heatmapper to use (like the heatmapper above, for example)
 )
 ```
 
