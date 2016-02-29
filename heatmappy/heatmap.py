@@ -39,7 +39,7 @@ class Heatmapper:
                                 which fulfils the GreyHeatmapper interface.
         """
 
-        self._opacity = opacity
+        self.opacity = opacity
 
         if isinstance(colours, LinearSegmentedColormap):
             self.cmap = colours
@@ -58,6 +58,22 @@ class Heatmapper:
         else:
             self.grey_heatmapper = grey_heatmapper
 
+    @property
+    def point_diameter(self):
+        return self.grey_heatmapper.point_diameter
+
+    @point_diameter.setter
+    def point_diameter(self, point_diameter):
+        self.grey_heatmapper.point_diameter = point_diameter
+
+    @property
+    def point_strength(self):
+        return self.grey_heatmapper.point_strength
+
+    @point_strength.setter
+    def point_strength(self, point_strength):
+        self.grey_heatmapper.point_strength = point_strength
+
     def heatmap(self, width, height, points, base_path=None, base_img=None):
         """
         :param points: sequence of tuples of (x, y), eg [(9, 20), (7, 3), (19, 12)]
@@ -67,7 +83,7 @@ class Heatmapper:
         """
         heatmap = self.grey_heatmapper.heatmap(width, height, points)
         heatmap = self._colourised(heatmap)
-        heatmap = _img_to_opacity(heatmap, self._opacity)
+        heatmap = _img_to_opacity(heatmap, self.opacity)
 
         if not (base_path or base_img):
             return heatmap
@@ -101,7 +117,7 @@ class Heatmapper:
 class GreyHeatMapper(metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, point_diameter, point_strength):
-        self.dm = point_diameter
+        self.point_diameter = point_diameter
         self.point_strength = point_strength
 
     @abstractmethod
@@ -139,12 +155,17 @@ class PySideGreyHeatmapper(GreyHeatMapper):
         painter.end()
 
     def _paint_point(self, painter, x, y):
-        grad = QtGui.QRadialGradient(x, y, self.dm/2)
+        grad = QtGui.QRadialGradient(x, y, self.point_diameter/2)
         grad.setColorAt(0, QtGui.QColor(0, 0, 0, max(self.point_strength, 0)))
         grad.setColorAt(1, QtGui.QColor(0, 0, 0, 0))
         brush = QtGui.QBrush(grad)
         painter.setBrush(brush)
-        painter.drawEllipse(x - self.dm/2, y - self.dm/2, self.dm, self.dm)
+        painter.drawEllipse(
+            x - self.point_diameter/2,
+            y - self.point_diameter/2,
+            self.point_diameter,
+            self.point_diameter
+        )
 
     @staticmethod
     def _qimage_to_pil_image(qimg):
@@ -167,11 +188,11 @@ class PILGreyHeatmapper(GreyHeatMapper):
         heat = Image.new('L', (width, height), color=255)
 
         dot = (Image.open(_asset_file('450pxdot.png')).copy()
-                    .resize((self.dm, self.dm), resample=Image.ANTIALIAS))
+                    .resize((self.point_diameter, self.point_diameter), resample=Image.ANTIALIAS))
         dot = _img_to_opacity(dot, self.point_strength)
 
         for x, y in points:
-            x, y = int(x - self.dm/2), int(y - self.dm/2)
+            x, y = int(x - self.point_diameter/2), int(y - self.point_diameter/2)
             heat.paste(dot, (x, y), dot)
 
         return heat

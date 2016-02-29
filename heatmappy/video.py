@@ -10,8 +10,8 @@ from heatmappy import Heatmapper
 
 
 class VideoHeatmapper:
-    def __init__(self, heatmapper):
-        self.heatmapper = heatmapper
+    def __init__(self, img_heatmapper):
+        self.img_heatmapper = img_heatmapper
 
     def heatmap_on_video(self, base_video, points,
                          heat_fps=15,
@@ -91,7 +91,7 @@ class VideoHeatmapper:
 
     def _heatmap_frames(self, width, height, frame_points):
         for frame_start, points in frame_points.items():
-            heatmap = self.heatmapper.heatmap(width, height, points)
+            heatmap = self.img_heatmapper.heatmap(width, height, points)
             yield frame_start, np.array(heatmap)
 
     @staticmethod
