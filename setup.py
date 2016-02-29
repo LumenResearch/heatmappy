@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
 setup(
     name='heatmappy',
     packages=['heatmappy'],
-    version='0.2.4',
+    version='0.2.5',
     description='Draw image heatmaps in python',
     author='Lumen Research',
     author_email='development@lumen-research.com',
