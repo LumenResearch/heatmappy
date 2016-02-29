@@ -41,15 +41,8 @@ class Heatmapper:
 
         self.opacity = opacity
 
-        if isinstance(colours, LinearSegmentedColormap):
-            self.cmap = colours
-        else:
-            files = {
-                'default': _asset_file('default.png'),
-                'reveal': _asset_file('reveal.png'),
-            }
-            scale_path = files.get(colours) or colours
-            self.cmap = self._cmap_from_image_path(scale_path)
+        self._colours = None
+        self.colours = colours
 
         if grey_heatmapper == 'PIL':
             self.grey_heatmapper = PILGreyHeatmapper(point_diameter, point_strength)
@@ -57,6 +50,24 @@ class Heatmapper:
             self.grey_heatmapper = PySideGreyHeatmapper(point_diameter, point_strength)
         else:
             self.grey_heatmapper = grey_heatmapper
+
+    @property
+    def colours(self):
+        return self._colours
+
+    @colours.setter
+    def colours(self, colours):
+        self._colours = colours
+
+        if isinstance(colours, LinearSegmentedColormap):
+            self._cmap = colours
+        else:
+            files = {
+                'default': _asset_file('default.png'),
+                'reveal': _asset_file('reveal.png'),
+            }
+            scale_path = files.get(colours) or colours
+            self._cmap = self._cmap_from_image_path(scale_path)
 
     @property
     def point_diameter(self):
@@ -102,7 +113,7 @@ class Heatmapper:
     def _colourised(self, img):
         """ maps values in greyscale image to colours """
         arr = numpy.array(img)
-        rgba_img = self.cmap(arr, bytes=True)
+        rgba_img = self._cmap(arr, bytes=True)
         return Image.fromarray(rgba_img)
 
     @staticmethod
@@ -204,4 +215,5 @@ if __name__ == '__main__':
     example_points = (randpoint(*example_img.size) for _ in range(500))
 
     heatmapper = Heatmapper(colours='default')
+    heatmapper.colours = 'reveal'
     heatmapper.heatmap_on_img(example_points, example_img).save('out.png')
