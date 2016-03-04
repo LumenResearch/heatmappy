@@ -14,7 +14,7 @@ class VideoHeatmapper:
         self.img_heatmapper = img_heatmapper
 
     def heatmap_on_video(self, base_video, points,
-                         heat_fps=15,
+                         heat_fps=20,
                          keep_heat=False,
                          heat_decay_s=None):
         width, height = base_video.size
@@ -30,12 +30,12 @@ class VideoHeatmapper:
 
         return CompositeVideoClip([base_video] + list(heatmap_clips))
 
-    def heatmap_on_video_path(self, video_path, points, heat_fps=15):
+    def heatmap_on_video_path(self, video_path, points, heat_fps=20):
         base = VideoFileClip(video_path)
         return self.heatmap_on_video(base, points, heat_fps)
 
     def heatmap_on_image(self, base_img, points,
-                         heat_fps=15,
+                         heat_fps=20,
                          duration_s=None,
                          keep_heat=False,
                          heat_decay_s=None):
@@ -53,7 +53,7 @@ class VideoHeatmapper:
         )
 
     def heatmap_on_image_path(self, base_img_path, points,
-                              heat_fps=15,
+                              heat_fps=20,
                               duration_s=None,
                               keep_heat=False,
                               heat_decay_s=None):
@@ -96,17 +96,18 @@ class VideoHeatmapper:
 
     @staticmethod
     def _heatmap_clips(heatmap_frames, fps):
+        interval = 1000 // fps
         for frame_start, heat in heatmap_frames:
             yield (ImageClip(heat)
                    .set_start(frame_start/1000)
-                   .set_duration((1000/fps)/1000))
+                   .set_duration(interval/1000))
 
 
 def _example_random_points():
     def rand_point(max_x, max_y, max_t):
         return random.randint(0, max_x), random.randint(0, max_y), random.randint(0, max_t)
 
-    return (rand_point(720, 480, 5000) for _ in range(500))
+    return (rand_point(720, 480, 40000) for _ in range(500))
 
 
 def main():
@@ -118,9 +119,8 @@ def main():
     heatmap_video = video_heatmapper.heatmap_on_image_path(
         base_img_path=example_base_img,
         points=_example_random_points(),
-        duration_s=10,
-        keep_heat=True,
-        heat_decay_s=1
+        duration_s=40,
+        keep_heat=True
     )
 
     heatmap_video.write_videofile('out_on_image.mp4', bitrate="5000k", fps=24)
