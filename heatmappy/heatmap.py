@@ -54,6 +54,8 @@ class Heatmapper:
             self.grey_heatmapper = PILGreyEllipseHeatmapper(point_diameter, point_strength)
         elif grey_heatmapper == "PILNPEllipse":
             self.grey_heatmapper = PILNPGreyEllipseHeatmapper(point_diameter, point_strength)
+        elif grey_heatmapper == "PILNPAreaDiscountEllipse":
+            self.grey_heatmapper = PILNPAreaDiscountGreyEllipseHeatmapper(point_diameter, point_strength)
         else:
             self.grey_heatmapper = grey_heatmapper
 
@@ -219,7 +221,7 @@ class PILGreyEllipseHeatmapper(GreyHeatMapper):
     def __init__(self, point_diameter, point_strength):
         super().__init__(point_diameter, point_strength)
 
-    @profile
+    # @profile
     def heatmap(self, width, height, points):
         heat = Image.new('L', (width, height), color=255)
         dot_template = Image.open(_asset_file('450pxdot.png')).copy()
@@ -245,8 +247,8 @@ class PILNPGreyEllipseHeatmapper(GreyHeatMapper):
     def __init__(self, point_diameter, point_strength):
         super().__init__(point_diameter, point_strength)
 
-    @profile
-    def heatmap(self, width, height, points):
+    # @profile
+    def heatmap(self, width, height, points, area_discount=False, unit_area_radius=200):
         heat = Image.new('L', (width, height), color=0)
         dot_template = Image.open(_asset_file('450pxdot.png')).copy()
         ellipse_canvas_template = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
@@ -271,6 +273,8 @@ class PILNPGreyEllipseHeatmapper(GreyHeatMapper):
             # ellipse_canvas_translate.show()
 
             ellipse_canvas_arr = numpy.asarray(ellipse_canvas_translate, 'float')
+            if area_discount:
+                heat_arr *= (unit_area_radius**2)/(w*h)
 
             heat_arr += ellipse_canvas_arr
 
@@ -281,6 +285,49 @@ class PILNPGreyEllipseHeatmapper(GreyHeatMapper):
         # heat.show()
         return heat
 
+class PILNPAreaDiscountGreyEllipseHeatmapper(GreyHeatMapper):
+    def __init__(self, point_diameter, point_strength):
+        super().__init__(point_diameter, point_strength)
+
+    # @profile
+    def heatmap(self, width, height, points, area_discount=True, unit_area_radius=30):
+        heat = Image.new('L', (width, height), color=0)
+        dot_template = Image.open(_asset_file('450pxdot.png')).copy()
+        ellipse_canvas_template = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
+
+        heat_arr = numpy.asarray(heat, 'float')
+
+        for x, y, w, h, angle, grey_discount in points:
+            ellipse = dot_template.copy().resize((w, h), resample=Image.ANTIALIAS)
+            ellipse_canvas_rotate = ellipse_canvas_template.copy()
+            ellipse_canvas_rotate.paste(ellipse, (int(ellipse_canvas_rotate.size[0]/2-ellipse.size[0]/2), int(ellipse_canvas_rotate.size[1]/2-ellipse.size[1]/2)), ellipse)
+            ellipse_canvas_rotate = ellipse_canvas_rotate.rotate(angle)
+            # ellipse_canvas_rotate.split()[-1].show()
+
+
+            x, y = int(x - ellipse_canvas_rotate.size[0]/2), int(y - ellipse_canvas_rotate.size[1]/2)
+
+            ellipse_canvas_translate = ellipse_canvas_template.copy()
+            ellipse_canvas_translate.paste(ellipse_canvas_rotate, (x, y), ellipse_canvas_rotate)
+            # ellipse_canvas_translate.split()[-1].show()
+
+            ellipse_canvas_translate = _img_to_opacity(ellipse_canvas_translate, self.point_strength).split()[-1]
+            # ellipse_canvas_translate.show()
+
+            ellipse_canvas_arr = numpy.asarray(ellipse_canvas_translate, 'float')
+            if area_discount:
+                d = (unit_area_radius**2)/(max((unit_area_radius**2), (w*h)))
+                # d=0.4
+                ellipse_canvas_arr *= d
+
+            heat_arr += ellipse_canvas_arr
+
+        heat_arr *= (255.0/heat_arr.max())
+        heat_arr = 255 - heat_arr
+        heat_arr = heat_arr.astype('uint8')
+        heat = Image.fromarray(heat_arr)
+        # heat.show()
+        return heat
 
 def reveal_example(example_img, example_points, sample_size):
     heatmapper = Heatmapper(colours='default')
@@ -299,25 +346,28 @@ def color_example(example_img, example_points, sample_size):
 
 
 def ellipse_example(example_img, example_points, sample_size):
-    example_img = Image.open(_asset_file('cat.jpg'))
-    heatmapper = Heatmapper(colours='default', point_strength=0.06 ,grey_heatmapper='PILEllipse')
-    # heatmapper.colours = 'reveal'
+    heatmapper = Heatmapper(colours='default', point_strength=0.1 ,grey_heatmapper='PILEllipse')
     img = heatmapper.heatmap_on_img(example_points, example_img)
     img.show()
     img.save("out_ellipse_{}.png".format(sample_size))
 
 
 def ellipse_np_example(example_img, example_points, sample_size):
-    example_img = Image.open(_asset_file('cat.jpg'))
-    heatmapper = Heatmapper(colours='default', point_strength=0.2, grey_heatmapper='PILNPEllipse')
-    # heatmapper.colours = 'reveal'
+    heatmapper = Heatmapper(colours='default', point_strength=1, grey_heatmapper='PILNPEllipse')
     img = heatmapper.heatmap_on_img(example_points, example_img)
     img.show()
     img.save("out_ellipse_{}.png".format(sample_size))
 
+def ellipse_np_areadiscount_example(example_img, example_points, sample_size):
+    heatmapper = Heatmapper(colours='default', point_strength=1, grey_heatmapper='PILNPAreaDiscountEllipse')
+    img = heatmapper.heatmap_on_img(example_points, example_img)
+    img.show()
+    img.save("out_ellipse_{}.png".format(sample_size))
+
+
 if __name__ == '__main__':
 
-    sample_size = 1501
+    sample_size = 100
     example_img = Image.open(_asset_file('cat.jpg'))
     randpoint = lambda max_x, max_y, max_w, max_h, max_angle, max_grey_discount: (random.randint(0, max_x), random.randint(0, max_y), random.randint(50, max_w), random.randint(50, max_h), random.randint(0, max_angle),random.randint(1, max_grey_discount))
     example_points_ellipse = [(randpoint(*example_img.size, max_w=300, max_h=300, max_angle=360, max_grey_discount=2)) for _ in range(sample_size)]
@@ -337,6 +387,11 @@ if __name__ == '__main__':
 
     tic = time.time()
     ellipse_np_example(example_img, example_points_ellipse, sample_size)
+    toc = time.time()
+    print(toc-tic)
+
+    tic = time.time()
+    ellipse_np_areadiscount_example(example_img, example_points_ellipse, sample_size)
     toc = time.time()
     print(toc-tic)
 
