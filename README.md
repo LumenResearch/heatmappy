@@ -79,7 +79,7 @@ The following options are available (shown with their default values):
 ```python
 heatmapper = Heatmapper(
     point_diameter=50,  # the size of each point to be drawn
-    alpha_strength=0.2,  # the strength, between 0 and 1, of each point to be drawn
+    point_strength=0.2,  # the strength, between 0 and 1, of each point to be drawn
     opacity=0.65,  # the opacity of the heatmap layer
     colours='default',  # 'default' or 'reveal'
                         # OR a matplotlib LinearSegmentedColorMap object 
