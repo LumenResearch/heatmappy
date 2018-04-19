@@ -96,17 +96,6 @@ class Heatmapper:
         heatmap = self._colourised(heatmap)
         heatmap = _img_to_opacity(heatmap, self.opacity)
 
-    def heatmap(self, width, height, points, base_path=None, base_img=None):
-        """
-        :param points: sequence of tuples of (x, y), eg [(9, 20), (7, 3), (19, 12)]
-        :return: If base_path of base_img provided, a heat map from the given points
-                 is overlayed on the image. Otherwise, the heat map alone is returned
-                 with a transparent background.
-        """
-        heatmap = self.grey_heatmapper.heatmap(width, height, points)
-        heatmap = self._colourised(heatmap)
-        heatmap = _img_to_opacity(heatmap, self.opacity)
-
         if base_path:
             background = Image.open(base_path)
             return Image.alpha_composite(background.convert('RGBA'), heatmap)
