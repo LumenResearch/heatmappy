@@ -2,7 +2,7 @@ cycler==0.9.0
 numpy==1.14.5
 matplotlib==1.5.0
 moviepy==0.2.2.11
-Pillow==5.2.0
+Pillow==6.2.0
 pyparsing==2.0.6
 python-dateutil==2.4.2
 pytz==2015.7
