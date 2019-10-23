@@ -96,11 +96,14 @@ class Heatmapper:
         heatmap = self._colourised(heatmap)
         heatmap = _img_to_opacity(heatmap, self.opacity)
 
-        if not (base_path or base_img):
+        if base_path:
+            background = Image.open(base_path)
+            return Image.alpha_composite(background.convert('RGBA'), heatmap)
+        elif base_img is not None:
+            return Image.alpha_composite(base_img.convert('RGBA'), heatmap)
+        else:
             return heatmap
 
-        background = Image.open(base_path) if base_path else base_img
-        return Image.alpha_composite(background.convert('RGBA'), heatmap)
 
     def heatmap_on_img_path(self, points, base_path):
         width, height = Image.open(base_path).size
