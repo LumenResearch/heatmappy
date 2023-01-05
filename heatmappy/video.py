@@ -102,7 +102,6 @@ class VideoHeatmapper:
     def _lazy_heatmap_clips(self, width, height, frame_points, fps):
         interval = 1000 // fps
         self._frame_starts, self._frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
-        frame_indices = range(len(self._frame_starts))
         clip_start_frame_index = 0
         for frame_index, frame_start in enumerate(self._frame_starts):
             clip_start_ms = self._frame_starts[clip_start_frame_index]
@@ -111,7 +110,7 @@ class VideoHeatmapper:
             clip_expected_duration_ms = interval * (frame_index - clip_start_frame_index + 1)
             if frame_index < len(self._frame_starts) - 1 and clip_duration_ms < clip_expected_duration_ms:
                 continue
-            clip_data = frame_indices[clip_start_frame_index: frame_index + 1]
+            clip_data = range(clip_start_frame_index, frame_index + 1)
             clip = DataVideoClip(clip_data,
                                  lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, :3], fps)
             clip.mask = DataVideoClip(clip_data,
