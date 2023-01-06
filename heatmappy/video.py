@@ -1,10 +1,11 @@
 from collections import defaultdict
-import os
 import random
+from functools import lru_cache
 
 from moviepy.editor import *
 import numpy as np
 from PIL import Image
+from moviepy.video.VideoClip import DataVideoClip
 
 from heatmappy import Heatmapper
 
@@ -16,7 +17,8 @@ class VideoHeatmapper:
     def heatmap_on_video(self, base_video, points,
                          heat_fps=20,
                          keep_heat=False,
-                         heat_decay_s=None):
+                         heat_decay_s=None,
+                         use_lazy_evaluation=True):
         width, height = base_video.size
 
         frame_points = self._frame_points(
@@ -25,8 +27,12 @@ class VideoHeatmapper:
             keep_heat=keep_heat,
             heat_decay_s=heat_decay_s
         )
-        heatmap_frames = self._heatmap_frames(width, height, frame_points)
-        heatmap_clips = self._heatmap_clips(heatmap_frames, heat_fps)
+
+        if use_lazy_evaluation:
+            heatmap_clips = self._lazy_heatmap_clips(width, height, frame_points, heat_fps)
+        else:
+            heatmap_frames = self._heatmap_frames(width, height, frame_points)
+            heatmap_clips = self._heatmap_clips(heatmap_frames, heat_fps)
 
         return CompositeVideoClip([base_video] + list(heatmap_clips))
 
@@ -83,11 +89,37 @@ class VideoHeatmapper:
 
         for x, y, t in pts:
             start = (t // interval) * interval
-            pt_last_interval = int(start + heat_decay_s*1000) if heat_decay_s else last_interval
-            for frame_time in range(start, pt_last_interval+1, interval):
+            pt_last_interval = int(start + heat_decay_s * 1000) if heat_decay_s else last_interval
+            for frame_time in range(start, pt_last_interval + 1, interval):
                 frames[frame_time].append((x, y))
 
         return frames
+
+    @lru_cache(maxsize=8)
+    def _heatmap_cache(self, width, height, index):
+        return self.img_heatmapper.heatmap(width, height, self._frame_points[index])
+
+    def _lazy_heatmap_clips(self, width, height, frame_points, fps):
+        interval = 1000 // fps
+        self._frame_starts, self._frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
+        clip_start_frame_index = 0
+        for frame_index, frame_start in enumerate(self._frame_starts):
+            clip_start_ms = self._frame_starts[clip_start_frame_index]
+            frame_time_ms = self._frame_starts[frame_index]
+            clip_duration_ms = frame_time_ms - clip_start_ms + 0.99 * interval
+            clip_expected_duration_ms = interval * (frame_index - clip_start_frame_index + 1)
+            if frame_index < len(self._frame_starts) - 1 and clip_duration_ms < clip_expected_duration_ms:
+                continue
+            clip_data = range(clip_start_frame_index, frame_index + 1)
+            clip = DataVideoClip(clip_data,
+                                 lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, :3], fps)
+            clip.mask = DataVideoClip(clip_data,
+                                      lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, 3] * (1 / 255),
+                                      fps, ismask=True)
+            clip.mask.start = clip.start = clip_start_ms / 1000
+            clip.mask.end = clip.end = (clip_start_ms + clip_duration_ms) / 1000
+            clip_start_frame_index = frame_index
+            yield clip
 
     def _heatmap_frames(self, width, height, frame_points):
         for frame_start, points in frame_points.items():
@@ -99,8 +131,8 @@ class VideoHeatmapper:
         interval = 1000 // fps
         for frame_start, heat in heatmap_frames:
             yield (ImageClip(heat)
-                   .set_start(frame_start/1000)
-                   .set_duration(interval/1000))
+                   .set_start(frame_start / 1000)
+                   .set_duration(interval / 1000))
 
 
 def _example_random_points():
@@ -125,6 +157,6 @@ def main():
 
     heatmap_video.write_videofile('out_on_image.mp4', bitrate="5000k", fps=24)
 
+
 if __name__ == '__main__':
     main()
-
