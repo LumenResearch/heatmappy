@@ -97,13 +97,13 @@ class VideoHeatmapper:
 
     @lru_cache(maxsize=8)
     def _heatmap_cache(self, width, height, index):
-        return self.img_heatmapper.heatmap(width, height, self._frame_points[index])
+        return self.img_heatmapper.heatmap(width, height, self._frame_point_data[index])
 
     def _lazy_heatmap_clips(self, width, height, frame_points, fps):
         interval = 1000 // fps
         frame_starts, frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
-        self._frame_points = defaultdict(list)
-        self._frame_points.update(enumerate(frame_points))
+        self._frame_point_data = defaultdict(list)
+        self._frame_point_data.update(enumerate(frame_points))
         clip_start_frame_index = 0
         for frame_index, frame_start in enumerate(frame_starts):
             clip_start_ms = frame_starts[clip_start_frame_index]
