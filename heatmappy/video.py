@@ -101,14 +101,16 @@ class VideoHeatmapper:
 
     def _lazy_heatmap_clips(self, width, height, frame_points, fps):
         interval = 1000 // fps
-        self._frame_starts, self._frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
+        frame_starts, frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
+        self._frame_points = defaultdict(list)
+        self._frame_points.update(enumerate(frame_points))
         clip_start_frame_index = 0
-        for frame_index, frame_start in enumerate(self._frame_starts):
-            clip_start_ms = self._frame_starts[clip_start_frame_index]
-            frame_time_ms = self._frame_starts[frame_index]
+        for frame_index, frame_start in enumerate(frame_starts):
+            clip_start_ms = frame_starts[clip_start_frame_index]
+            frame_time_ms = frame_starts[frame_index]
             clip_duration_ms = frame_time_ms - clip_start_ms + 0.99 * interval
             clip_expected_duration_ms = interval * (frame_index - clip_start_frame_index + 1)
-            if frame_index < len(self._frame_starts) - 1 and clip_duration_ms < clip_expected_duration_ms:
+            if frame_index < len(frame_starts) - 1 and clip_duration_ms < clip_expected_duration_ms:
                 continue
             clip_data = range(clip_start_frame_index, frame_index + 1)
             clip = DataVideoClip(clip_data,
@@ -116,10 +118,8 @@ class VideoHeatmapper:
             clip.mask = DataVideoClip(clip_data,
                                       lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, 3] * (1 / 255),
                                       fps, ismask=True)
-            clip.mask.start = clip.start = clip_start_ms / 1000
-            clip.mask.end = clip.end = (clip_start_ms + clip_duration_ms) / 1000
             clip_start_frame_index = frame_index
-            yield clip
+            yield clip.set_start(clip_start_ms / 1000)
 
     def _heatmap_frames(self, width, height, frame_points):
         for frame_start, points in frame_points.items():
