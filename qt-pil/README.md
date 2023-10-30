@@ -3,11 +3,11 @@ Draw image and video heatmaps in python
 
 ### Image 
 
-![newspaper heatmap](/examples/paper.png?raw=true)
+![newspaper heatmap](/qt-pil/examplesxamples/paper.png?raw=true)
 
 ### Video
 
-![video heatmap](/examples/example.gif?raw=true)
+![video heatmap](/qt-pil/examplesxamples/example.gif?raw=true)
 
 # Install
 
@@ -42,7 +42,7 @@ heatmapper = Heatmapper()
 heatmap = heatmapper.heatmap_on_img(example_points, example_img)
 heatmap.save('heatmap.png')
 ```
-![default cat](/examples/default-cat.png?raw=true)
+![default cat](/qt-pil/examplesxamples/default-cat.png?raw=true)
 
 ### Draw a reveal heatmap, given the image path
 
@@ -51,7 +51,7 @@ heatmapper = Heatmapper(opacity=0.9, colours='reveal')
 heatmap = heatmapper.heatmap_on_img_path(example_points, example_img_path)
 heatmap.save('heatmap.png')
 ```
-![reveal cat](/examples/reveal-cat.png?raw=true)
+![reveal cat](/qt-pil/examplesxamples/reveal-cat.png?raw=true)
 
 ### Draw a video heatmap
 
@@ -97,11 +97,11 @@ video_heatmapper = VideoHeatmapper(
 
 ### default
 
-![default colour scheme](/heatmappy/assets/default.png?raw=true)
+![default colour scheme](/qt-pil/heatmappyatmappy/assets/default.png?raw=true)
 
 ### reveal
 
-![reveal colour scheme](/heatmappy/assets/reveal.png?raw=true)
+![reveal colour scheme](/qt-pil/heatmappyatmappy/assets/reveal.png?raw=true)
 
 
 # Coming soon
