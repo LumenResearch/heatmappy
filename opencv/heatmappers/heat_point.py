@@ -2,7 +2,8 @@ import os.path
 
 import cv2
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
+from typing import Optional
 
 try:
     from .. import lr
@@ -10,6 +11,19 @@ except ImportError:
     from opencv import lr
 
 logger = lr.setup_logger()
+
+
+class CirclePoint(BaseModel):
+    diameter_px: int
+    std_px: int
+    strength_gery_level: int
+    _name: Optional[str] = PrivateAttr(default=None)
+
+    @property
+    def name(self):
+        if self._name is None:
+            self._name = f"circle_{self.diameter_px}_{self.std_px}_{self.strength_gery_level}"
+        return self._name
 
 
 class HeatPoint(BaseModel):
@@ -24,32 +38,40 @@ class HeatPoint(BaseModel):
 
     @lr.lr_error_logger(logger)
     @lr.lr_timer(logger)
-    def get_circle(self, diameter: int, std: int) -> np.ndarray:
-        k = (diameter, std)
-        if not k in self.circles_cache:
-            circle = self._load_circle(*k)
-            self.circles_cache[k] = circle
+    def get_circle(self, diameter_px: int, std_px: int, strength_gry_level: int) -> np.ndarray:
+        circle = CirclePoint(diameter_px=diameter_px, std_px=std_px, strength_gery_level=strength_gry_level)
+        if circle.name not in self.circles_cache:
+            circle_img = self._load_circle(circle)
+            self.circles_cache[circle.name] = circle_img
 
-        return self.circles_cache[k].copy()
-
-    @lr.lr_timer(logger)
-    def _load_circle(self, diameter: int, std: int) -> np.ndarray:
-        fpath = os.path.join(self.cache_path, f"circle_{diameter}_{std}.png")
-        circle = cv2.imread(fpath)
-        if circle is None:
-            circle = self._draw_circle(diameter, std)
-            cv2.imwrite(fpath, circle)
-
-        return circle
+        return self.circles_cache[circle.name].copy()
 
     @lr.lr_timer(logger)
-    def _draw_circle(celf, diameter: int, std: int) -> np.ndarray:
+    def _load_circle(self, circle: CirclePoint) -> np.ndarray:
+        fpath = os.path.join(self.cache_path, f"{circle.name}.png")
+        circle_img = cv2.imread(fpath)
+        if circle_img is None:
+            circle_img = self._draw_circle(circle)
+            cv2.imwrite(fpath, circle_img)
+
+        return circle_img
+
+    @lr.lr_timer(logger)
+    def _draw_circle(celf, circle: CirclePoint) -> np.ndarray:
+
+        # Correct the strength of the heatpoint
+        new_strength = max(10, min(255, circle.strength_gery_level))  # limit strength between 10 and 255
+        if circle.strength_gery_level < 10 or circle.strength_gery_level > 255:
+            logger.warn(f"Strength of heat point={circle.strength_gery_level} which is out of range of 10-255. "
+                        f"Snapping it to {new_strength}")
+        circle.strength_gery_level = new_strength
+
         # Create a grayscale image with the specified dimensions
-        image_size = (diameter, diameter)
+        image_size = (circle.diameter_px, circle.diameter_px)
         image = np.zeros(image_size, dtype=np.uint8)
 
         # Calculate the center of the image
-        center = (diameter // 2, diameter // 2)
+        center = (circle.diameter_px // 2, circle.diameter_px // 2)
 
         # Loop through each pixel in the image
         for y in range(image_size[1]):
@@ -58,7 +80,7 @@ class HeatPoint(BaseModel):
                 distance = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
 
                 # Calculate the whiteness (pixel intensity) based on the distance and std
-                whiteness = 255 * np.exp(-0.5 * (distance / std) ** 2)
+                whiteness = circle.strength_gery_level * np.exp(-0.5 * (distance / circle.std_px) ** 2)
 
                 # Set the pixel intensity in the image
                 image[y, x] = int(whiteness)
@@ -87,10 +109,11 @@ if __name__ == '__main__':
         # Define the diameter and standard deviation (std) for the gradient
         diameter = 400  # Adjust as needed
         std = 100  # Adjust as needed
+        strength = 50
 
         hp = HeatPoint(cache_path=cfg.cache_folder)
 
-        gradient_circle = hp.get_circle(diameter, std)
+        gradient_circle = hp.get_circle(diameter, std, strength)
 
         # Display the image
         cv2.imshow("Gradient Circle", gradient_circle)
