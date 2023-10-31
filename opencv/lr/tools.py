@@ -5,6 +5,7 @@ import json
 
 import logging
 
+
 # todo at the moment the logger logs into the same file
 #  and it just check if a console or file handler exists wihtout checking the caller.
 #  Later We wantto check if a handler from a specific caller exists and whter it writes to console or the file
