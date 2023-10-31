@@ -26,15 +26,6 @@ class CirclePoint(BaseModel):
         return self._name
 
 
-def require_initialization(method):
-    def wrapper(cls, *args, **kwargs):
-        if not getattr(cls, '_initialized', False):
-            raise ValueError("Class not initialized. Call initialize_class first.")
-        return method(cls, *args, **kwargs)
-
-    return wrapper
-
-
 class HeatPoint:
     _initialized = False
 
@@ -59,7 +50,7 @@ class HeatPoint:
         return cls.circles_cache[circle.name].copy()
 
     @classmethod
-    @require_initialization
+    @lr.lr_require_initialization
     def _load_circle(cls, circle: CirclePoint) -> np.ndarray:
         fpath = os.path.join(cls.cache_path, f"{circle.name}.png")
         circle_img = cv2.imread(fpath)

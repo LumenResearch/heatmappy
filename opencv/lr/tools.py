@@ -41,6 +41,15 @@ def setup_logger(log_file="app.log", log_to_console=True, log_to_file=True):
     return logger
 
 
+def lr_require_initialization(method):
+    def wrapper(cls, *args, **kwargs):
+        if not getattr(cls, '_initialized', False):
+            raise ValueError(f"LR: {cls.__name__} Class not initialized. Call initialize_class first.")
+        return method(cls, *args, **kwargs)
+
+    return wrapper
+
+
 def lr_error_logger(logger):
     def decorator(func):
         def wrapper(*args, **kwargs):

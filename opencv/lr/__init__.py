@@ -1,3 +1,1 @@
-from .tools import setup_logger
-from .tools import lr_error_logger
-from .tools import lr_timer
+from .tools import (setup_logger, lr_error_logger, lr_timer, lr_require_initialization)
