@@ -26,38 +26,51 @@ class CirclePoint(BaseModel):
         return self._name
 
 
-class HeatPoint(BaseModel):
+def require_initialization(method):
+    def wrapper(cls, *args, **kwargs):
+        if not getattr(cls, '_initialized', False):
+            raise ValueError("Class not initialized. Call initialize_class first.")
+        return method(cls, *args, **kwargs)
+
+    return wrapper
+
+
+class HeatPoint:
+    _initialized = False
+
     circles_cache: dict = dict()
 
     cache_path: str
 
-    def __init__(self, cache_path):
-        cache_path = os.path.join(cache_path, 'heat_point')
-        os.makedirs(cache_path, exist_ok=True)
-        super().__init__(cache_path=cache_path)
+    @classmethod
+    def initialize_class(cls, cache_path):
+        cls.cache_path = os.path.join(cache_path, 'heat_point')
+        os.makedirs(HeatPoint.cache_path, exist_ok=True)
+        cls._initialized = True
 
+    @classmethod
     @lr.lr_error_logger(logger)
-    @lr.lr_timer(logger)
-    def get_circle(self, diameter_px: int, std_px: int, strength_gry_level: int) -> np.ndarray:
+    def get_circle(cls, diameter_px: int, std_px: int, strength_gry_level: int) -> np.ndarray:
         circle = CirclePoint(diameter_px=diameter_px, std_px=std_px, strength_gery_level=strength_gry_level)
-        if circle.name not in self.circles_cache:
-            circle_img = self._load_circle(circle)
-            self.circles_cache[circle.name] = circle_img
+        if circle.name not in cls.circles_cache:
+            circle_img = cls._load_circle(circle)
+            cls.circles_cache[circle.name] = circle_img
 
-        return self.circles_cache[circle.name].copy()
+        return cls.circles_cache[circle.name].copy()
 
-    @lr.lr_timer(logger)
-    def _load_circle(self, circle: CirclePoint) -> np.ndarray:
-        fpath = os.path.join(self.cache_path, f"{circle.name}.png")
+    @classmethod
+    @require_initialization
+    def _load_circle(cls, circle: CirclePoint) -> np.ndarray:
+        fpath = os.path.join(cls.cache_path, f"{circle.name}.png")
         circle_img = cv2.imread(fpath)
         if circle_img is None:
-            circle_img = self._draw_circle(circle)
+            circle_img = cls._draw_circle(circle)
             cv2.imwrite(fpath, circle_img)
 
         return circle_img
 
-    @lr.lr_timer(logger)
-    def _draw_circle(celf, circle: CirclePoint) -> np.ndarray:
+    @classmethod
+    def _draw_circle(cls, circle: CirclePoint) -> np.ndarray:
 
         # Correct the strength of the heatpoint
         new_strength = max(10, min(255, circle.strength_gery_level))  # limit strength between 10 and 255
@@ -87,7 +100,8 @@ class HeatPoint(BaseModel):
 
         return image
 
-    def _get_ellipse(self, image, width, height, angle):
+    @classmethod
+    def _get_ellipse(cls, image, width, height, angle):
         # image = self._get_circle()
         #
         # # Resize the image to the specified width and height
@@ -111,9 +125,9 @@ if __name__ == '__main__':
         std = 100  # Adjust as needed
         strength = 50
 
-        hp = HeatPoint(cache_path=cfg.cache_folder)
+        HeatPoint.initialize_class(cache_path=cfg.cache_folder)
 
-        gradient_circle = hp.get_circle(diameter, std, strength)
+        gradient_circle = HeatPoint.get_circle(diameter, std, strength)
 
         # Display the image
         cv2.imshow("Gradient Circle", gradient_circle)
