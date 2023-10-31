@@ -1,0 +1,3 @@
+name: default
+cache_folder: cache_data
+debug_mode: false
