@@ -138,7 +138,7 @@ class HeatPoint(ABC, BaseModel):
 
 
 class HeatCircle(HeatPoint):
-    # hp_type = HeatPointType.circle
+    hp_type: HeatPointType = HeatPointType.circle
     diameter_px: int
     color_decay_std_px: int
 
@@ -159,7 +159,6 @@ if __name__ == '__main__':
 
     def example_circle(hig):
         hp = HeatCircle(
-            hp_type=HeatPointType.circle,
             center_x_px=10,
             center_y_px=10,
             strength_10_255=255,
@@ -168,8 +167,6 @@ if __name__ == '__main__':
             color_decay_std_px=100)
         print(hp.model_dump())
         return hp
-
-
 
 
     cfg = Config()
