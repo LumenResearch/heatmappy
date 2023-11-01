@@ -119,11 +119,9 @@ class HeatPoint(ABC, BaseModel):
     center_y_px: int
     strength_10_255: int
     image_generator: Type[HeatPointImageGenerator]
-    scale: float = 1
 
-    @property
     @abstractmethod
-    def image(self) -> np.ndarray:
+    def image(self, scale: float = 1) -> np.ndarray:
         """
         Returns the image corresponding to the point width/height, std, strength, and scale
         :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
@@ -148,20 +146,19 @@ class HeatCircle(HeatPoint):
     diameter_px: int
     color_decay_std_px: int
 
-    @property
-    def image(self) -> np.ndarray:
+    def image(self, scale: float = 1) -> np.ndarray:
         """
         Returns the image corresponding to the circle diameter, std, strength, and scale
         :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
         :return:
         """
-        if self.scale == 1:
+        if scale == 1:
             return self.image_generator.get_circle(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
         else:
             return self.image_generator.get_circle(
-                int(self.diameter_px * self.scale),
-                int(self.color_decay_std_px * self.scale),
-                int(self.strength_10_255 * self.scale)
+                int(self.diameter_px * scale),
+                int(self.color_decay_std_px * scale),
+                int(self.strength_10_255 * scale)
             )
 
     @property
@@ -183,7 +180,6 @@ if __name__ == '__main__':
             image_generator=HeatPointImageGenerator,
             diameter_px=500,
             color_decay_std_px=100,
-            scale=2
         )
         print(hp.model_dump())
         return hp
@@ -203,7 +199,7 @@ if __name__ == '__main__':
     hp = example_circle(HeatPointImageGenerator)
     print("draw or load from file", (time() - tik) * 1000, "ms")
     # Display the image
-    cv2.imshow("Gradient Circle", hp.image)
+    cv2.imshow("Gradient Circle", hp.image(scale=2))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -215,6 +211,6 @@ if __name__ == '__main__':
     hp = example_circle(HeatPointImageGenerator)
     print("from cache", (time() - tik) * 1000, "ms")
     # Display the image
-    cv2.imshow("Gradient Circle", hp.image)
+    cv2.imshow("Gradient Circle", hp.image(scale=2))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
