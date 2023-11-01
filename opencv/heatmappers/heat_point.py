@@ -119,10 +119,16 @@ class HeatPoint(ABC, BaseModel):
     center_y_px: int
     strength_10_255: int
     image_generator: Type[HeatPointImageGenerator]
+    scale: float = 1
 
     @property
     @abstractmethod
     def image(self) -> np.ndarray:
+        """
+        Returns the image corresponding to the point width/height, std, strength, and scale
+        :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
+        :return:
+        """
         pass
 
     @property
@@ -144,7 +150,19 @@ class HeatCircle(HeatPoint):
 
     @property
     def image(self) -> np.ndarray:
-        return self.image_generator.get_circle(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
+        """
+        Returns the image corresponding to the circle diameter, std, strength, and scale
+        :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
+        :return:
+        """
+        if self.scale == 1:
+            return self.image_generator.get_circle(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
+        else:
+            return self.image_generator.get_circle(
+                int(self.diameter_px * self.scale),
+                int(self.color_decay_std_px * self.scale),
+                int(self.strength_10_255 * self.scale)
+            )
 
     @property
     def top_left_corner(self):
@@ -152,7 +170,7 @@ class HeatCircle(HeatPoint):
 
 
 if __name__ == '__main__':
-    from time import time
+    from time import time, sleep
 
     from opencv.configs import Config
 
@@ -164,7 +182,9 @@ if __name__ == '__main__':
             strength_10_255=255,
             image_generator=HeatPointImageGenerator,
             diameter_px=500,
-            color_decay_std_px=100)
+            color_decay_std_px=100,
+            scale=2
+        )
         print(hp.model_dump())
         return hp
 
@@ -186,6 +206,9 @@ if __name__ == '__main__':
     cv2.imshow("Gradient Circle", hp.image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+    # sleep for 1 second so all parallel tasks are finished so timing is more accurate
+    sleep(1)
 
     # second time load from memory
     tik = time()
