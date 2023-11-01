@@ -27,7 +27,7 @@ class CirclePoint(BaseModel):
 
 
 class HeatPoint:
-    _initialized = False
+    _initialized: bool = False
 
     circles_cache: dict = dict()
 
