@@ -1,1 +1,1 @@
-from .heat_point import HeatPoint, CirclePoint, HeatPointImageGenerator
+from .heat_point import HeatPoint, HeatCircle, HeatPointImageGenerator
