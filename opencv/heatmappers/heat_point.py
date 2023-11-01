@@ -158,7 +158,7 @@ class HeatCircle(HeatPoint):
             return self.image_generator.get_circle(
                 int(self.diameter_px * scale),
                 int(self.color_decay_std_px * scale),
-                int(self.strength_10_255 * scale)
+                int(self.strength_10_255)
             )
 
     @property
@@ -199,9 +199,8 @@ if __name__ == '__main__':
     hp = example_circle(HeatPointImageGenerator)
     print("draw or load from file", (time() - tik) * 1000, "ms")
     # Display the image
-    cv2.imshow("Gradient Circle", hp.image(scale=2))
+    cv2.imshow("Gradient Circle scale 2", hp.image(scale=2))
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
     # sleep for 1 second so all parallel tasks are finished so timing is more accurate
     sleep(1)
@@ -211,6 +210,6 @@ if __name__ == '__main__':
     hp = example_circle(HeatPointImageGenerator)
     print("from cache", (time() - tik) * 1000, "ms")
     # Display the image
-    cv2.imshow("Gradient Circle", hp.image(scale=2))
+    cv2.imshow("Gradient Circle scale 1", hp.image(scale=1))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
