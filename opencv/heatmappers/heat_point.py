@@ -60,7 +60,7 @@ class HeatPointImageGenerator:
     @lr.lr_require_initialization
     def _load_circle(cls, circle: CirclePoint) -> np.ndarray:
         fpath = os.path.join(cls.cache_path, f"{circle.name}.png")
-        circle_img = cv2.imread(fpath)
+        circle_img = cv2.imread(fpath, cv2.IMREAD_GRAYSCALE)
         if circle_img is None:
             circle_img = cls._draw_circle(circle)
             cv2.imwrite(fpath, circle_img)
