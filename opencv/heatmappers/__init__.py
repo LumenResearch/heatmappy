@@ -1,1 +1,1 @@
-from .heat_point import HeatPoint, CirclePoint
+from .heat_point import CirclePoint

@@ -1,9 +1,11 @@
 import os.path
+from enum import Enum
+from abc import ABC, abstractmethod
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, PrivateAttr
-from typing import Optional
+from pydantic import BaseModel, PrivateAttr, field_validator
+from typing import Optional, Tuple, Type
 
 try:
     from .. import lr
@@ -11,6 +13,11 @@ except ImportError:
     from opencv import lr
 
 logger = lr.setup_logger()
+
+
+class HeatPointType(Enum):
+    circle: str = "circle"
+    ellipse: str = "ellipse"
 
 
 class CirclePoint(BaseModel):
@@ -26,7 +33,7 @@ class CirclePoint(BaseModel):
         return self._name
 
 
-class HeatPoint:
+class HeatPointImageGenerator:
     _initialized: bool = False
 
     circles_cache: dict = dict()
@@ -36,7 +43,7 @@ class HeatPoint:
     @classmethod
     def initialize_class(cls, cache_path):
         cls.cache_path = os.path.join(cache_path, 'heat_point')
-        os.makedirs(HeatPoint.cache_path, exist_ok=True)
+        os.makedirs(cls.cache_path, exist_ok=True)
         cls._initialized = True
 
     @classmethod
@@ -106,29 +113,86 @@ class HeatPoint:
         raise NotImplementedError
 
 
+class HeatPoint(ABC, BaseModel):
+    hp_type: HeatPointType
+    center_x_px: int
+    center_y_px: int
+    strength_10_255: int
+    image_generator: Type[HeatPointImageGenerator]
+
+    @property
+    @abstractmethod
+    def image(self) -> np.ndarray:
+        pass
+
+    @property
+    @abstractmethod
+    def top_left_corner(self) -> Tuple[int, int]:
+        pass
+
+    @field_validator('image_generator')
+    def check_image_generator(cls, v):
+        if not issubclass(v, HeatPointImageGenerator):
+            raise ValueError("image_generator must be HeatPointImageGenerator or a subclass of it")
+        return v
+
+
+class HeatCircle(HeatPoint):
+    # hp_type = HeatPointType.circle
+    diameter_px: int
+    color_decay_std_px: int
+
+    @property
+    def image(self) -> np.ndarray:
+        return self.image_generator.get_circle(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
+
+    @property
+    def top_left_corner(self):
+        return self.center_x_px - self.diameter_px // 2, self.center_y_px - self.diameter_px // 2
+
+
 if __name__ == '__main__':
-    def example_circle():
-        from opencv.configs import Config
-        cfg = Config()
-
-        # Define the diameter and standard deviation (std) for the gradient
-        diameter = 400  # Adjust as needed
-        std = 100  # Adjust as needed
-        strength = 50
-
-        HeatPoint.initialize_class(cache_path=cfg.cache_folder)
-
-        gradient_circle = HeatPoint.get_circle(diameter, std, strength)
-
-        # Display the image
-        cv2.imshow("Gradient Circle", gradient_circle)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-        # Optionally, save the image to a file
-        # cv2.imwrite("gradient_circle.png", gradient_circle)
+    from time import time
 
 
-    example_circle()
-    example_circle()
-    # example_ellipse()
+    def example_circle(hig):
+        hp = HeatCircle(
+            hp_type=HeatPointType.circle,
+            center_x_px=10,
+            center_y_px=10,
+            strength_10_255=255,
+            image_generator=HeatPointImageGenerator,
+            diameter_px=500,
+            color_decay_std_px=100)
+        print(hp.model_dump())
+        return hp
+
+
+    from opencv.configs import Config
+
+    cfg = Config()
+
+    # Define the diameter and standard deviation (std) for the gradient
+    diameter = 400  # Adjust as needed
+    std = 100  # Adjust as needed
+    strength = 50
+
+    HeatPointImageGenerator.initialize_class(cache_path=cfg.cache_folder)
+
+    # first time either draws the image and saves it to file or reads from file
+    tik = time()
+    hp = example_circle(HeatPointImageGenerator)
+    print("draw or load from file", (time() - tik) * 1000, "ms")
+    # Display the image
+    cv2.imshow("Gradient Circle", hp.image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    # second time load from memory
+    tik = time()
+    hp = example_circle(HeatPointImageGenerator)
+    print("from cache", (time() - tik) * 1000, "ms")
+    # Display the image
+    cv2.imshow("Gradient Circle", hp.image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
