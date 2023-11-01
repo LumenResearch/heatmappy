@@ -154,6 +154,8 @@ class HeatCircle(HeatPoint):
 if __name__ == '__main__':
     from time import time
 
+    from opencv.configs import Config
+
 
     def example_circle(hig):
         hp = HeatCircle(
@@ -168,7 +170,7 @@ if __name__ == '__main__':
         return hp
 
 
-    from opencv.configs import Config
+
 
     cfg = Config()
 
