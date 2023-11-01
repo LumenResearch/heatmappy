@@ -54,7 +54,7 @@ class HeatPointImageGenerator:
             circle_img = cls._load_circle(circle)
             cls.circles_cache[circle.name] = circle_img
 
-        return cls.circles_cache[circle.name].copy()
+        return cls.circles_cache[circle.name]
 
     @classmethod
     @lr.lr_require_initialization
