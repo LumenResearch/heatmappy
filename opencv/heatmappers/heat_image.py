@@ -1,11 +1,8 @@
-import os.path
+from typing import Tuple, List
+from enum import Enum
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, PrivateAttr
-from typing import Tuple, List, Optional
-
-import cv2
 
 try:
     from .. import lr
@@ -17,8 +14,30 @@ except ImportError:
 logger = lr.setup_logger()
 
 
+class HeatImageNormalisationMethod(Enum):
+    scale_0_255 = "scale_0_255"
+    cut_off_at_255 = "cut_off_at_255"
+
 class HeatImage:
     _resizing_warning_issued = False
+
+    @staticmethod
+    def normalise_heat_image(heat_image: np.ndarray, method:HeatImageNormalisationMethod):
+        if method is HeatImageNormalisationMethod.scale_0_255:
+            # Normalize the array
+            min_val = np.min(heat_image)
+            max_val = np.max(heat_image)
+
+            # Scale the array to 0-255
+            normalized_array = (heat_image - min_val) / (max_val - min_val) * 255
+
+            # Convert to uint8 type if this is for an image
+            heat_image = normalized_array.astype(np.uint8)
+            return heat_image
+        elif method is HeatImageNormalisationMethod.cut_off_at_255:
+            heat_image[heat_image > 255] = 255
+            heat_image = heat_image.astype(np.uint8)
+            return heat_image
 
     @classmethod
     def get_heat_image(cls,
@@ -114,7 +133,7 @@ if __name__ == '__main__':
         hp = HeatCircle(
             center_x_px=x,
             center_y_px=y,
-            strength_10_255=10,
+            strength_10_255=250,
             image_generator=hig,
             diameter_px=200,
             color_decay_std_px=30)
@@ -136,17 +155,19 @@ if __name__ == '__main__':
     tik = time()
     for i in range(100):
         hi = HeatImage.get_heat_image(1920, 1080, circles, scale=1)
+        hi = HeatImage.normalise_heat_image(hi, method= HeatImageNormalisationMethod.cut_off_at_255)
     print(time() - tik)
-    # cv2.imshow("heat image", hi)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    cv2.imshow("heat image", hi)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     print("Sleeping ===============================")
     sleep(3)
 
     tik = time()
     for i in range(100):
-        hi = HeatImage.get_heat_image(1920, 1080, circles, scale=0.5, return_original_scale=True)
+        hi = HeatImage.get_heat_image(1920, 1080, circles, scale=1, return_original_scale=True)
+        hi = HeatImage.normalise_heat_image(hi, method= HeatImageNormalisationMethod.scale_0_255)
     print(time() - tik)
-    # cv2.imshow("heat image", hi)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    cv2.imshow("heat image", hi)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
