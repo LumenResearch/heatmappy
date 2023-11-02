@@ -18,11 +18,33 @@ class HeatImageNormalisationMethod(Enum):
     scale_0_255 = "scale_0_255"
     cut_off_at_255 = "cut_off_at_255"
 
+
 class HeatImage:
     _resizing_warning_issued = False
 
     @staticmethod
-    def normalise_heat_image(heat_image: np.ndarray, method:HeatImageNormalisationMethod):
+    def overlay_on_background(
+            background_image: np.ndarray,
+            heat_image: np.ndarray,
+            colormap: int = cv2.COLORMAP_JET,
+            alpha: float = 0.4) -> np.ndarray:
+        # Apply a colormap to the heatmap (optional)
+
+        colored_heatmap = cv2.applyColorMap(heat_image, colormap)
+
+        # # Keep the zeros in the heatmap uncolored
+        mask = heat_image != 0
+        # colored_heatmap[mask] = [0, 0, 0]  # Assuming you want to keep the zeros as black
+
+        # Blend the heatmap with the original image
+        # Adjust alpha (weight of the original image) and beta (weight of the heatmap) as needed
+        beta = 1 - alpha  # Weight for the heatmap
+        background_image[mask] = cv2.addWeighted(colored_heatmap, alpha, background_image, beta, 0)[mask]
+
+        return background_image
+
+    @staticmethod
+    def normalise_heat_image(heat_image: np.ndarray, method: HeatImageNormalisationMethod):
         if method is HeatImageNormalisationMethod.scale_0_255:
             # Normalize the array
             min_val = np.min(heat_image)
@@ -94,7 +116,11 @@ class HeatImage:
         # Add the small array to the main array at the specified region
         if start_x > img_width or start_y > img_height:
             return
-        heat_img[start_x:end_x, start_y:end_y] += heat_point_img[small_start_x:small_end_x, small_start_y:small_end_y]
+        try:
+            heat_img[start_x:end_x, start_y:end_y] += heat_point_img[small_start_x:small_end_x,
+                                                      small_start_y:small_end_y]
+        except:
+            dbg = 1
 
 
 if __name__ == '__main__':
@@ -105,8 +131,8 @@ if __name__ == '__main__':
     from opencv.configs import Config
 
 
-    def generate_coordinates_line(num_points, max_value, proximity):
-        points = [(p * 2, p * 2) for p in range(num_points)]
+    def generate_coordinates_line(num_points, proximity):
+        points = [(p * proximity, p * proximity) for p in range(num_points)]
         return points
 
 
@@ -126,48 +152,52 @@ if __name__ == '__main__':
         return points
 
 
-    generate_coordinates = [generate_coordinates_random, generate_coordinates_line][0]
+    def generate_single_point(x, y):
+        return [(x, y)]
 
 
     def gen_circles(hig, x, y):
         hp = HeatCircle(
             center_x_px=x,
             center_y_px=y,
-            strength_10_255=250,
+            strength_10_255=40,
             image_generator=hig,
-            diameter_px=200,
-            color_decay_std_px=30)
+            diameter_px=50,
+            color_decay_std_px=5)
         return hp
 
 
+    image = cv2.imread("../assets/cat.jpg")
+    image = cv2.resize(image, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_LINEAR)
+
     # Generate 100 points
-    points_coords = generate_coordinates(10, 500, 50)
+    points_coords = [
+        generate_coordinates_random(100, 500, 100),
+        generate_coordinates_line(10, 50),
+        generate_single_point(100, 100)
+    ][0]
     cfg = Config()
     HeatPointImageGenerator.initialize_class(cache_path=cfg.cache_folder)
     circles = [gen_circles(HeatPointImageGenerator, x, y) for x, y in points_coords]
 
-    # print(circles[0].image().shape)
-    # # Display one circle image
-    # cv2.imshow("Gradient Circle", circles[0].image())
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
     tik = time()
-    for i in range(100):
-        hi = HeatImage.get_heat_image(1920, 1080, circles, scale=1)
-        hi = HeatImage.normalise_heat_image(hi, method= HeatImageNormalisationMethod.cut_off_at_255)
+    for i in range(1):
+        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles, scale=1)
+        hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.cut_off_at_255)
+        heated_image = HeatImage.overlay_on_background(image, hi)
     print(time() - tik)
-    cv2.imshow("heat image", hi)
+    cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     print("Sleeping ===============================")
-    sleep(3)
+    # sleep(3)
 
     tik = time()
-    for i in range(100):
-        hi = HeatImage.get_heat_image(1920, 1080, circles, scale=1, return_original_scale=True)
-        hi = HeatImage.normalise_heat_image(hi, method= HeatImageNormalisationMethod.scale_0_255)
+    for i in range(1):
+        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles, scale=1, return_original_scale=True)
+        hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.scale_0_255)
+        heated_image = HeatImage.overlay_on_background(image, hi)
     print(time() - tik)
-    cv2.imshow("heat image", hi)
+    cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
