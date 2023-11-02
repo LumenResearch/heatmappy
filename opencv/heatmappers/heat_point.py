@@ -90,8 +90,20 @@ class HeatPointImageGenerator:
                 # Calculate the distance from the current pixel to the center
                 distance = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
 
-                # Calculate the whiteness (pixel intensity) based on the distance and std
-                whiteness = circle.strength_gery_level * np.exp(-0.5 * (distance / circle.std_px) ** 2)
+                # if circle.std_px > 0:
+                if circle.std_px > 0:
+                    # Calculate the whiteness (pixel intensity) based on the distance and std
+                    if distance > circle.diameter_px//2:
+                        whiteness = 0
+                    else:
+                        whiteness = circle.strength_gery_level * np.exp(-0.5 * (distance / circle.std_px) ** 2)
+                else:
+                    if distance > circle.diameter_px//2:
+                        whiteness = 0
+                    else:
+                        whiteness = (
+                                circle.strength_gery_level -
+                                (circle.strength_gery_level - circle.std_px) * min(1, distance/(circle.diameter_px//2)))
 
                 # Set the pixel intensity in the image
                 image[y, x] = int(whiteness)
@@ -176,10 +188,10 @@ if __name__ == '__main__':
         hp = HeatCircle(
             center_x_px=10,
             center_y_px=10,
-            strength_10_255=255,
+            strength_10_255=150,
             image_generator=HeatPointImageGenerator,
-            diameter_px=500,
-            color_decay_std_px=100,
+            diameter_px=400,
+            color_decay_std_px=300,
         )
         print(hp.model_dump())
         return hp
@@ -188,10 +200,6 @@ if __name__ == '__main__':
     cfg = Config()
 
     # Define the diameter and standard deviation (std) for the gradient
-    diameter = 400  # Adjust as needed
-    std = 100  # Adjust as needed
-    strength = 50
-
     HeatPointImageGenerator.initialize_class(cache_path=cfg.cache_folder)
 
     # first time either draws the image and saves it to file or reads from file
