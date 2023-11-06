@@ -65,8 +65,7 @@ class HeatImage:
     def get_heat_image(cls,
                        width: int,
                        height: int,
-                       heat_points:
-                       List[HeatPoint],
+                       heat_points: List[HeatPoint],
                        scale: float = 1.0,
                        return_original_scale=False
                        ) -> np.ndarray:
@@ -90,7 +89,7 @@ class HeatImage:
 
     @staticmethod
     def _add_point(heat_img: np.ndarray, heat_point_img: np.ndarray, point: Tuple[int, int]):
-        x, y = point
+        y, x = point
 
         img_height, img_width = heat_img.shape
         point_height, point_width = heat_point_img.shape
@@ -162,8 +161,8 @@ if __name__ == '__main__':
             center_y_px=y,
             strength_10_255=40,
             image_generator=hig,
-            diameter_px=50,
-            color_decay_std_px=5)
+            diameter_px=200,
+            color_decay_std_px=0)
         return hp
 
 
@@ -174,8 +173,9 @@ if __name__ == '__main__':
     points_coords = [
         generate_coordinates_random(100, 500, 100),
         generate_coordinates_line(10, 50),
-        generate_single_point(100, 100)
-    ][0]
+        generate_single_point(100, 500)
+    ][2]
+
     cfg = Config()
     HeatPointImageGenerator.initialize_class(cache_path=cfg.cache_folder)
     circles = [gen_circles(HeatPointImageGenerator, x, y) for x, y in points_coords]
