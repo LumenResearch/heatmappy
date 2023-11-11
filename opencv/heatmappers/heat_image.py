@@ -9,7 +9,7 @@ try:
     from . import HeatPoint, CirclePoint, HeatPointImageGenerator
 except ImportError:
     from opencv import lr
-    from opencv.heatmappers import HeatPoint, HeatCircle, HeatPointImageGenerator
+    from opencv.heatmappers import HeatPoint, HeatCircle
 
 logger = lr.setup_logger()
 
@@ -125,15 +125,11 @@ class HeatImage:
 if __name__ == '__main__':
 
     import random
-    from time import time, sleep
-
-    from opencv.configs import Config
-
+    from time import time
 
     def generate_coordinates_line(num_points, proximity):
         points = [(p * proximity, p * proximity) for p in range(num_points)]
         return points
-
 
     def generate_coordinates_random(num_points, max_value, proximity):
         # Generates the first point
@@ -150,21 +146,16 @@ if __name__ == '__main__':
 
         return points
 
-
     def generate_single_point(x, y):
         return [(x, y)]
 
-
-    def gen_circles(hig, x, y):
-        hp = HeatCircle(
+    def gen_circles(x, y):
+        return HeatCircle(
             center_x_px=x,
             center_y_px=y,
             strength_10_255=40,
-            image_generator=hig,
             diameter_px=200,
             color_decay_std_px=0)
-        return hp
-
 
     image = cv2.imread("../assets/cat.jpg")
     image = cv2.resize(image, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_LINEAR)
@@ -174,11 +165,9 @@ if __name__ == '__main__':
         generate_coordinates_random(100, 500, 100),
         generate_coordinates_line(10, 50),
         generate_single_point(100, 500)
-    ][2]
+    ][1]
 
-    cfg = Config()
-    HeatPointImageGenerator.initialize_class(cache_path=cfg.cache_folder)
-    circles = [gen_circles(HeatPointImageGenerator, x, y) for x, y in points_coords]
+    circles = [gen_circles(x, y) for x, y in points_coords]
 
     tik = time()
     for i in range(1):
