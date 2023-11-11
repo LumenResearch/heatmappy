@@ -30,7 +30,7 @@ class HeatPoint(ABC, BaseModel):
     strength_10_255: int
 
     @abstractmethod
-    def image(self, scale: float = 1) -> np.ndarray:
+    def image(self) -> np.ndarray:
         """
         Returns the image corresponding to the point width/height, std, strength, and scale
         :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
@@ -43,18 +43,13 @@ class HeatCircle(HeatPoint):
     hp_type: HeatPointType = HeatPointType.circle
     diameter_px: int
 
-    def image(self, scale: float = 1) -> np.ndarray:
+    def image(self) -> np.ndarray:
         """
         Returns the image corresponding to the circle diameter, std, strength, and scale
-        :param scale: return the circle at a different scale (e.g. if we need half sized images to speed up heat-mapping
         :return:
         """
-        if scale == 1:
-            return self._draw(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
-        else:
-            return self._draw(int(self.diameter_px * scale),
-                              int(self.color_decay_std_px * scale),
-                              int(self.strength_10_255))
+
+        return self._draw(self.diameter_px, self.color_decay_std_px, self.strength_10_255)
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -120,17 +115,7 @@ if __name__ == '__main__':
         hp = example_circle()
         print("draw or load from file", (time() - tik) * 1000.0, "ms")
         # Display the image
-        cv2.imshow("Gradient Circle scale 2", hp.image(scale=2))
+        cv2.imshow("Gradient Circle scale 2", hp.image())
         cv2.waitKey(15)
-
-    # sleep for 1 second so all parallel tasks are finished so timing is more accurate
-    sleep(1)
-
-    # second time load from memory
-    tik = time()
-    hp = example_circle()
-    print("from cache", (time() - tik) * 1000.0, "ms")
-    # Display the image
-    cv2.imshow("Gradient Circle scale 1", hp.image(scale=1))
-    cv2.waitKey(0)
     cv2.destroyAllWindows()
+

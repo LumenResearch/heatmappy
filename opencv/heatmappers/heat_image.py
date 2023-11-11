@@ -61,30 +61,19 @@ class HeatImage:
             heat_image = heat_image.astype(np.uint8)
             return heat_image
 
-    @classmethod
-    def get_heat_image(cls,
-                       width: int,
-                       height: int,
-                       heat_points: List[HeatPoint],
-                       scale: float = 1.0,
-                       return_original_scale=False
-                       ) -> np.ndarray:
+    @staticmethod
+    def get_heat_image(
+            width: int,
+            height: int,
+            heat_points: List[HeatPoint]) -> np.ndarray:
 
         # Generate a new heat image
-        heat_img = np.zeros((int(height * scale), int(width * scale)))
+        heat_img = np.zeros((int(height), int(width)))
 
         # Add heat points to the heat image
         for hp in heat_points:
-            cls._add_point(heat_img, hp.image(scale=scale), (int(hp.center_x_px * scale), int(hp.center_y_px * scale)))
+            HeatImage._add_point(heat_img, hp.image(), (int(hp.center_x_px), int(hp.center_y_px)))
 
-        # Rescale back to original size if requested
-        if scale != 1 and return_original_scale:
-            # Issue a warining if rescaling back is requested
-            if return_original_scale and not cls._resizing_warning_issued:
-                logger.warn("LR: returning to original scale takes longer as resizing an image is demanding")
-                cls._resizing_warning_issued = True
-
-            heat_img = cv2.resize(heat_img, (width, height))
         return heat_img
 
     @staticmethod
@@ -171,7 +160,7 @@ if __name__ == '__main__':
 
     tik = time()
     for i in range(1):
-        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles, scale=1)
+        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles)
         hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.cut_off_at_255)
         heated_image = HeatImage.overlay_on_background(image, hi)
     print(time() - tik)
@@ -183,7 +172,7 @@ if __name__ == '__main__':
 
     tik = time()
     for i in range(1):
-        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles, scale=1, return_original_scale=True)
+        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles)
         hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.scale_0_255)
         heated_image = HeatImage.overlay_on_background(image, hi)
     print(time() - tik)
