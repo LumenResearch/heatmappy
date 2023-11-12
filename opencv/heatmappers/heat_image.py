@@ -1,3 +1,9 @@
+__all__ = [
+    "HeatColorMap",
+    "HeatImageNormalisationMethod",
+    "HeatImage"
+]
+
 from typing import Tuple, List
 from enum import Enum
 
@@ -14,6 +20,31 @@ except ImportError:
 logger = lr.setup_logger()
 
 
+class HeatColorMap(Enum):
+    autumn = cv2.COLORMAP_AUTUMN
+    bone = cv2.COLORMAP_BONE
+    jet = cv2.COLORMAP_JET
+    winter = cv2.COLORMAP_WINTER
+    rainbow = cv2.COLORMAP_RAINBOW
+    ocean = cv2.COLORMAP_OCEAN
+    summer = cv2.COLORMAP_SUMMER
+    spring = cv2.COLORMAP_SPRING
+    cool = cv2.COLORMAP_COOL
+    hsv = cv2.COLORMAP_HSV
+    pink = cv2.COLORMAP_PINK
+    hot = cv2.COLORMAP_HOT
+    parula = cv2.COLORMAP_PARULA
+    magma = cv2.COLORMAP_MAGMA
+    inferno = cv2.COLORMAP_INFERNO
+    plasma = cv2.COLORMAP_PLASMA
+    viridis = cv2.COLORMAP_VIRIDIS
+    cividis = cv2.COLORMAP_CIVIDIS
+    twilight = cv2.COLORMAP_TWILIGHT
+    twilight_shifted = cv2.COLORMAP_TWILIGHT_SHIFTED
+    turbo = cv2.COLORMAP_TURBO
+    deepgreen = cv2.COLORMAP_DEEPGREEN
+
+
 class HeatImageNormalisationMethod(Enum):
     scale_0_255 = "scale_0_255"
     cut_off_at_255 = "cut_off_at_255"
@@ -23,14 +54,27 @@ class HeatImage:
     _resizing_warning_issued = False
 
     @staticmethod
+    def add_heatmap(
+            background_image: np.ndarray,
+            heat_points: List[HeatPoint],
+            method: HeatImageNormalisationMethod = HeatImageNormalisationMethod.cut_off_at_255,
+            color_map: HeatColorMap = HeatColorMap.jet,
+            heat_transparency: float = 0.4
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        heat_image = HeatImage._get_heat_image(background_image.shape[1], background_image.shape[0], heat_points)
+        heat_image = HeatImage._normalise_heat_image(heat_image, method=method)
+        heat_res = HeatImage._overlay_on_background(background_image, heat_image, color_map, heat_transparency)
+        return heat_res, heat_image
+
+    @staticmethod
     def _overlay_on_background(
             background_image: np.ndarray,
             heat_image: np.ndarray,
-            colormap: int = cv2.COLORMAP_JET,
-            alpha: float = 0.4) -> np.ndarray:
+            colormap: HeatColorMap,
+            alpha: float) -> np.ndarray:
         # Apply a colormap to the heatmap (optional)
 
-        colored_heatmap = cv2.applyColorMap(heat_image, colormap)
+        colored_heatmap = cv2.applyColorMap(heat_image, colormap.value)
 
         # # Keep the zeros in the heatmap uncolored
         mask = heat_image != 0
@@ -160,22 +204,22 @@ if __name__ == '__main__':
 
     tik = time()
     for i in range(1):
-        hi = HeatImage._get_heat_image(image.shape[1], image.shape[0], circles)
-        hi = HeatImage._normalise_heat_image(hi, method=HeatImageNormalisationMethod.cut_off_at_255)
-        heated_image = HeatImage._overlay_on_background(image, hi)
-    print(time() - tik)
-    cv2.imshow("heat image", heated_image)
+        heated_image, _ = HeatImage.add_heatmap(image, circles)
+
+        print(time() - tik)
+        cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    print("Sleeping ===============================")
-    # sleep(3)
 
     tik = time()
     for i in range(1):
-        hi = HeatImage._get_heat_image(image.shape[1], image.shape[0], circles)
-        hi = HeatImage._normalise_heat_image(hi, method=HeatImageNormalisationMethod.scale_0_255)
-        heated_image = HeatImage._overlay_on_background(image, hi)
-    print(time() - tik)
-    cv2.imshow("heat image", heated_image)
+        heated_image, _ = HeatImage.add_heatmap(image,
+                                                circles,
+                                                method=HeatImageNormalisationMethod.scale_0_255,
+                                                color_map=HeatColorMap.cool,
+                                                heat_transparency=0.9)
+
+        print(time() - tik)
+        cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
+
     cv2.destroyAllWindows()
