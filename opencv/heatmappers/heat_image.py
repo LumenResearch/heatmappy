@@ -23,7 +23,7 @@ class HeatImage:
     _resizing_warning_issued = False
 
     @staticmethod
-    def overlay_on_background(
+    def _overlay_on_background(
             background_image: np.ndarray,
             heat_image: np.ndarray,
             colormap: int = cv2.COLORMAP_JET,
@@ -44,7 +44,7 @@ class HeatImage:
         return background_image
 
     @staticmethod
-    def normalise_heat_image(heat_image: np.ndarray, method: HeatImageNormalisationMethod):
+    def _normalise_heat_image(heat_image: np.ndarray, method: HeatImageNormalisationMethod):
         if method is HeatImageNormalisationMethod.scale_0_255:
             # Normalize the array
             min_val = np.min(heat_image)
@@ -62,7 +62,7 @@ class HeatImage:
             return heat_image
 
     @staticmethod
-    def get_heat_image(
+    def _get_heat_image(
             width: int,
             height: int,
             heat_points: List[HeatPoint]) -> np.ndarray:
@@ -112,7 +112,7 @@ class HeatImage:
 
 
 if __name__ == '__main__':
-
+    # Example
     import random
     from time import time
 
@@ -160,9 +160,9 @@ if __name__ == '__main__':
 
     tik = time()
     for i in range(1):
-        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles)
-        hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.cut_off_at_255)
-        heated_image = HeatImage.overlay_on_background(image, hi)
+        hi = HeatImage._get_heat_image(image.shape[1], image.shape[0], circles)
+        hi = HeatImage._normalise_heat_image(hi, method=HeatImageNormalisationMethod.cut_off_at_255)
+        heated_image = HeatImage._overlay_on_background(image, hi)
     print(time() - tik)
     cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
@@ -172,9 +172,9 @@ if __name__ == '__main__':
 
     tik = time()
     for i in range(1):
-        hi = HeatImage.get_heat_image(image.shape[1], image.shape[0], circles)
-        hi = HeatImage.normalise_heat_image(hi, method=HeatImageNormalisationMethod.scale_0_255)
-        heated_image = HeatImage.overlay_on_background(image, hi)
+        hi = HeatImage._get_heat_image(image.shape[1], image.shape[0], circles)
+        hi = HeatImage._normalise_heat_image(hi, method=HeatImageNormalisationMethod.scale_0_255)
+        heated_image = HeatImage._overlay_on_background(image, hi)
     print(time() - tik)
     cv2.imshow("heat image", heated_image)
     cv2.waitKey(0)
