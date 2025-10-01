@@ -1,13 +1,11 @@
-from collections import defaultdict
+import os
 import random
-from functools import lru_cache
+from collections import defaultdict
 
-from moviepy.editor import *
 import numpy as np
 from PIL import Image
-from moviepy.video.VideoClip import DataVideoClip
-
 from heatmappy import Heatmapper
+from moviepy.editor import *
 
 
 class VideoHeatmapper:
@@ -17,8 +15,7 @@ class VideoHeatmapper:
     def heatmap_on_video(self, base_video, points,
                          heat_fps=20,
                          keep_heat=False,
-                         heat_decay_s=None,
-                         use_lazy_evaluation=True):
+                         heat_decay_s=None):
         width, height = base_video.size
 
         frame_points = self._frame_points(
@@ -27,12 +24,8 @@ class VideoHeatmapper:
             keep_heat=keep_heat,
             heat_decay_s=heat_decay_s
         )
-
-        if use_lazy_evaluation:
-            heatmap_clips = self._lazy_heatmap_clips(width, height, frame_points, heat_fps)
-        else:
-            heatmap_frames = self._heatmap_frames(width, height, frame_points)
-            heatmap_clips = self._heatmap_clips(heatmap_frames, heat_fps)
+        heatmap_frames = self._heatmap_frames(width, height, frame_points)
+        heatmap_clips = self._heatmap_clips(heatmap_frames, heat_fps)
 
         return CompositeVideoClip([base_video] + list(heatmap_clips))
 
@@ -94,32 +87,6 @@ class VideoHeatmapper:
                 frames[frame_time].append((x, y))
 
         return frames
-
-    @lru_cache(maxsize=8)
-    def _heatmap_cache(self, width, height, index):
-        return self.img_heatmapper.heatmap(width, height, self._frame_point_data[index])
-
-    def _lazy_heatmap_clips(self, width, height, frame_points, fps):
-        interval = 1000 // fps
-        frame_starts, frame_points = zip(*sorted(frame_points.items(), key=lambda pair: pair[0]))
-        self._frame_point_data = defaultdict(list)
-        self._frame_point_data.update(enumerate(frame_points))
-        clip_start_frame_index = 0
-        for frame_index, frame_start in enumerate(frame_starts):
-            clip_start_ms = frame_starts[clip_start_frame_index]
-            frame_time_ms = frame_starts[frame_index]
-            clip_duration_ms = frame_time_ms - clip_start_ms + 0.99 * interval
-            clip_expected_duration_ms = interval * (frame_index - clip_start_frame_index + 1)
-            if frame_index < len(frame_starts) - 1 and clip_duration_ms < clip_expected_duration_ms:
-                continue
-            clip_data = range(clip_start_frame_index, frame_index + 1)
-            clip = DataVideoClip(clip_data,
-                                 lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, :3], fps)
-            clip.mask = DataVideoClip(clip_data,
-                                      lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, 3] * (1 / 255),
-                                      fps, ismask=True)
-            clip_start_frame_index = frame_index
-            yield clip.set_start(clip_start_ms / 1000)
 
     def _heatmap_frames(self, width, height, frame_points):
         for frame_start, points in frame_points.items():
