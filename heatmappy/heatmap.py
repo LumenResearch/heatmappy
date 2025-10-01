@@ -8,21 +8,33 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy
 from PIL import Image
 
-try:
-    from PySide import QtCore, QtGui
-except ImportError:
-    pass
-
+# Try modern Qt bindings first; fall back to legacy
+QtCore = None
+QtGui = None
+try:  # PySide6 (Qt6)
+    from PySide6 import QtCore as _QtCore, QtGui as _QtGui  # type: ignore
+    QtCore, QtGui = _QtCore, _QtGui
+except Exception:
+    try:  # PySide2 (Qt5)
+        from PySide2 import QtCore as _QtCore, QtGui as _QtGui  # type: ignore
+        QtCore, QtGui = _QtCore, _QtGui
+    except Exception:
+        try:  # Very old PySide (Qt4)
+            from PySide import QtCore as _QtCore, QtGui as _QtGui  # type: ignore
+            QtCore, QtGui = _QtCore, _QtGui
+        except Exception:
+            QtCore = None  # type: ignore
+            QtGui = None   # type: ignore
 
 _asset_file = partial(os.path.join, os.path.dirname(__file__), 'assets')
 
 
 def _img_to_opacity(img, opacity):
-        img = img.copy()
-        alpha = img.split()[3]
-        alpha = alpha.point(lambda p: int(p * opacity))
-        img.putalpha(alpha)
-        return img
+    img = img.copy()
+    alpha = img.split()[3]
+    alpha = alpha.point(lambda p: int(p * opacity))
+    img.putalpha(alpha)
+    return img
 
 
 class Heatmapper:
@@ -87,6 +99,10 @@ class Heatmapper:
 
     def heatmap(self, width, height, points, base_path=None, base_img=None):
         """
+        :param base_img:
+        :param base_path:
+        :param height:
+        :param width:
         :param points: sequence of tuples of (x, y), eg [(9, 20), (7, 3), (19, 12)]
         :return: If base_path of base_img provided, a heat map from the given points
                  is overlayed on the image. Otherwise, the heat map alone is returned
@@ -104,7 +120,6 @@ class Heatmapper:
         else:
             return heatmap
 
-
     def heatmap_on_img_path(self, points, base_path):
         width, height = Image.open(base_path).size
         return self.heatmap(width, height, points, base_path=base_path)
@@ -116,15 +131,17 @@ class Heatmapper:
     def _colourised(self, img):
         """ maps values in greyscale image to colours """
         arr = numpy.array(img)
-        rgba_img = self._cmap(arr, bytes=True)
+        # Normalize to [0, 1] to satisfy modern Matplotlib colormap expectations
+        norm = arr.astype('float32') / 255.0
+        rgba_img = self._cmap(norm, bytes=True)
         return Image.fromarray(rgba_img)
 
     @staticmethod
     def _cmap_from_image_path(img_path):
-        img = Image.open(img_path)
+        img = Image.open(img_path).convert('RGBA')
         img = img.resize((256, img.height))
         colours = (img.getpixel((x, 0)) for x in range(256))
-        colours = [(r/255, g/255, b/255, a/255) for (r, g, b, a) in colours]
+        colours = [(r / 255, g / 255, b / 255, a / 255) for (r, g, b, a) in colours]
         return LinearSegmentedColormap.from_list('from_image', colours)
 
 
@@ -137,6 +154,8 @@ class GreyHeatMapper(metaclass=ABCMeta):
     @abstractmethod
     def heatmap(self, width, height, points):
         """
+        :param height:
+        :param width:
         :param points: sequence of tuples of (x, y), eg [(9, 20), (7, 3), (19, 12)]
         :return: a white image of size width x height with black areas painted at
                  the given points
@@ -146,6 +165,11 @@ class GreyHeatMapper(metaclass=ABCMeta):
 
 class PySideGreyHeatmapper(GreyHeatMapper):
     def __init__(self, point_diameter, point_strength):
+        if QtGui is None or QtCore is None:
+            raise ImportError(
+                "PySide bindings (PySide6/PySide2) are not installed. "
+                "Install PySide6 or use grey_heatmapper='PIL'."
+            )
         super().__init__(point_diameter, point_strength)
         self.point_strength = int(point_strength * 255)
 
@@ -169,14 +193,14 @@ class PySideGreyHeatmapper(GreyHeatMapper):
         painter.end()
 
     def _paint_point(self, painter, x, y):
-        grad = QtGui.QRadialGradient(x, y, self.point_diameter/2)
+        grad = QtGui.QRadialGradient(x, y, self.point_diameter / 2)
         grad.setColorAt(0, QtGui.QColor(0, 0, 0, max(self.point_strength, 0)))
         grad.setColorAt(1, QtGui.QColor(0, 0, 0, 0))
         brush = QtGui.QBrush(grad)
         painter.setBrush(brush)
         painter.drawEllipse(
-            x - self.point_diameter/2,
-            y - self.point_diameter/2,
+            x - self.point_diameter / 2,
+            y - self.point_diameter / 2,
             self.point_diameter,
             self.point_diameter
         )
@@ -201,12 +225,14 @@ class PILGreyHeatmapper(GreyHeatMapper):
     def heatmap(self, width, height, points):
         heat = Image.new('L', (width, height), color=255)
 
+        # Pillow >=10 deprecates Image.ANTIALIAS; use Resampling.LANCZOS
+        resample = getattr(Image, 'Resampling', Image).LANCZOS
         dot = (Image.open(_asset_file('450pxdot.png')).copy()
-                    .resize((self.point_diameter, self.point_diameter), resample=Image.ANTIALIAS))
+               .resize((self.point_diameter, self.point_diameter), resample=resample))
         dot = _img_to_opacity(dot, self.point_strength)
 
         for x, y in points:
-            x, y = int(x - self.point_diameter/2), int(y - self.point_diameter/2)
+            x, y = int(x - self.point_diameter / 2), int(y - self.point_diameter / 2)
             heat.paste(dot, (x, y), dot)
 
         return heat

@@ -15,11 +15,12 @@ Draw image and video heatmaps in python
 
 # Requirements
 
+- Python 3.9–3.13
 - matplotlib
 - moviepy
 - numpy
 - Pillow
-- PySide (optional: up to ~20% faster than Pillow alone)
+- PySide6 or PySide2 (optional: up to ~20% faster than Pillow alone when using the 'PySide' grey heatmapper)
 
 # Examples
 
