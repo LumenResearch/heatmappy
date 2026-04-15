@@ -202,7 +202,7 @@ class PILGreyHeatmapper(GreyHeatMapper):
         heat = Image.new('L', (width, height), color=255)
 
         dot = (Image.open(_asset_file('450pxdot.png')).copy()
-                    .resize((self.point_diameter, self.point_diameter), resample=Image.ANTIALIAS))
+                    .resize((self.point_diameter, self.point_diameter), resample=Image.LANCZOS))
         dot = _img_to_opacity(dot, self.point_strength)
 
         for x, y in points:
