@@ -1,4 +1,4 @@
-numpy
-matplotlib
-moviepy
-Pillow
+numpy>=2.4.4
+matplotlib>=3.10.8
+moviepy>=2.2.1
+Pillow>=11.3.0
