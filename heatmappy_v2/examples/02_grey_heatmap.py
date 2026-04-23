@@ -3,7 +3,7 @@ Example 02 — Grey heatmap
 
 Demonstrates GreyHeatmapper with different normalisation modes, min_intensity,
 and the three ways to specify point size:
-  - Bulk tuples with defaults (5% of min image dimension)
+  - Bulk tuples with defaults (20% of min image dimension)
   - Per-point diameter_pct (percentage of min image dimension)
   - Per-point diameter (absolute pixels)
 
@@ -48,7 +48,7 @@ hm = GreyHeatmapper(point_strength=0.5, normalisation="relative")
 
 # 150 random points via bulk tuple conversion — size defaults to 5% of min(W, H)
 all_150_points = points_from_tuples(make_random_tuples(150))
-p1 = labelled(hm.heatmap(W, H, all_150_points), f"150 people | bulk tuples | default 5% = {int(min(W,H)*0.05)}px")
+p1 = labelled(hm.heatmap(W, H, all_150_points), f"150 people | bulk tuples | default 20% = {int(min(W,H)*0.20)}px")
 
 # 3 singled-out participants — relative (misleading: looks as bright as 150)
 three_points = make_clustered_points(3, cx=W // 3, cy=H // 2, spread=30)
@@ -68,7 +68,7 @@ p4 = labelled(hm_floor.heatmap(W, H, three_points), "3 people | absolute + min_i
 bulk_points = points_from_tuples(make_random_tuples(40))
 p5 = labelled(
     hm.heatmap(W, H, bulk_points),
-    f"bulk default | 5% = {int(min(W, H) * 0.05)}px"
+    f"bulk default | 20% = {int(min(W, H) * 0.20)}px"
 )
 
 # diameter_pct — each point sized relative to image
@@ -92,8 +92,8 @@ p7 = labelled(hm.heatmap(W, H, px_points), "diameter px | 20 / 60 / 120px")
 
 # mixed — some absolute, some pct, some default
 mixed_points = [
-    Point(x=W * 0.15, y=H * 0.5),                        # default 5%
-    Point(x=W * 0.4,  y=H * 0.5, diameter_pct=0.10),     # 10% pct
+    Point(x=W * 0.15, y=H * 0.5),                        # default 20%
+    Point(x=W * 0.4,  y=H * 0.5, diameter_pct=0.20),     # 20% pct
     Point(x=W * 0.65, y=H * 0.5, diameter=80),            # 80px absolute
     Point(x=W * 0.85, y=H * 0.5, diameter=30, strength=1.0),  # absolute + custom strength
 ]

@@ -106,7 +106,7 @@ class GreyHeatmapper:
     def _resolve_diameter(point: Point, width: int, height: int) -> int | None:
         if point.diameter is not None:
             return point.diameter
-        pct = point.diameter_pct if point.diameter_pct is not None else 0.05
+        pct = point.diameter_pct if point.diameter_pct is not None else 0.20
         return int(min(width, height) * pct)
 
     def _stamp(
