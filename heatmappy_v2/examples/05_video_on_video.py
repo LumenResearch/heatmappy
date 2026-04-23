@@ -25,6 +25,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import cv2
+import numpy as np
 
 from heatmappy2.heatmap import Heatmapper
 from heatmappy2.video import VideoHeatmapper, VideoPoint
@@ -116,3 +117,83 @@ for prefix, hm in [
         os.path.join(EXAMPLES_DIR, f"{prefix}_smooth_decay.mp4"),
     )
     print(f"Saved: {prefix}_smooth_decay.mp4")
+
+# --------------------------------------------------------------------------- grid
+
+GRID_CELLS = [
+    # (path, col_label, row_label)
+    ("05a_colour_no_decay.mp4", "no decay", "colour"),
+    ("05a_colour_hard_decay.mp4", "hard decay", "colour"),
+    ("05a_colour_smooth_decay.mp4", "smooth decay", "colour"),
+    ("05d_reveal_no_decay.mp4", "no decay", "reveal"),
+    ("05d_reveal_hard_decay.mp4", "hard decay", "reveal"),
+    ("05d_reveal_smooth_decay.mp4", "smooth decay", "reveal"),
+]
+GRID_COLS, GRID_ROWS = 3, 2
+
+
+def stitch_grid(
+    cells: list[tuple[str, str, str]],
+    output_path: str,
+    n_cols: int,
+    n_rows: int,
+) -> None:
+    caps = [cv2.VideoCapture(os.path.join(EXAMPLES_DIR, p)) for p, _, _ in cells]
+    fps_out = caps[0].get(cv2.CAP_PROP_FPS)
+    cell_w = int(caps[0].get(cv2.CAP_PROP_FRAME_WIDTH))
+    cell_h = int(caps[0].get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    writer = cv2.VideoWriter(
+        output_path,
+        cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore[attr-defined]
+        fps_out,
+        (cell_w * n_cols, cell_h * n_rows),
+    )
+    try:
+        while True:
+            row_frames = []
+            done = False
+            for cap, (_, col_label, row_label) in zip(caps, cells, strict=True):
+                ret, frame = cap.read()
+                if not ret:
+                    done = True
+                    break
+                label = f"{row_label} | {col_label}"
+                cv2.putText(
+                    frame,
+                    label,
+                    (8, 24),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    frame,
+                    label,
+                    (8, 24),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 0, 0),
+                    1,
+                    cv2.LINE_AA,
+                )
+                row_frames.append(frame)
+            if done:
+                break
+            rows = [np.hstack(row_frames[r * n_cols : (r + 1) * n_cols]) for r in range(n_rows)]
+            writer.write(np.vstack(rows))
+    finally:
+        for cap in caps:
+            cap.release()
+        writer.release()
+
+
+stitch_grid(
+    GRID_CELLS,
+    os.path.join(EXAMPLES_DIR, "05_grid.mp4"),
+    n_cols=GRID_COLS,
+    n_rows=GRID_ROWS,
+)
+print("Saved: 05_grid.mp4")
