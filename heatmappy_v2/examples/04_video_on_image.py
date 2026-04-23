@@ -1,12 +1,16 @@
 """
 Example 04 — Heatmap video on a static image
 
-Renders a 5-second heatmap video over cat.jpg at 20 FPS using all three decay modes:
-  - 04a_no_decay.mp4      point visible only in its own frame
-  - 04b_hard_decay.mp4    full intensity for 500 ms then vanishes
-  - 04c_smooth_decay.mp4  linear fade from full intensity to zero over 500 ms
+Renders a 5-second heatmap video over cat.jpg at 20 FPS.
+Colour and reveal modes, each with all three decay variants:
+  - 04a_colour_no_decay.mp4       colour | point visible only in its own frame
+  - 04b_colour_hard_decay.mp4     colour | full intensity for 500 ms then vanishes
+  - 04c_colour_smooth_decay.mp4   colour | linear fade to zero over 500 ms
+  - 04d_reveal_no_decay.mp4       reveal | point visible only in its own frame
+  - 04e_reveal_hard_decay.mp4     reveal | full intensity for 500 ms then vanishes
+  - 04f_reveal_smooth_decay.mp4   reveal | linear fade to zero over 500 ms
 
-All three videos use the same 100 gaze points per frame, Gaussian-distributed
+All six videos use the same 100 gaze points per frame, Gaussian-distributed
 around the image centre (spread = min(w,h) / 5).
 
 Run from the repo root:
@@ -72,39 +76,45 @@ H, W = img.shape[:2]
 
 gaze_points = random_video_points(width=W, height=H, duration_ms=DURATION_MS, fps=FPS)
 
-heatmapper = Heatmapper(
+colour_heatmapper = Heatmapper(
     point_diameter=100, point_strength=0.6, normalisation="relative", opacity=0.65
 )
-
-# no decay — each point visible only in its own frame
-vh_no_decay = VideoHeatmapper(heatmapper)
-vh_no_decay.heatmap_on_image(
-    img,
-    gaze_points,
-    os.path.join(EXAMPLES_DIR, "04a_no_decay.mp4"),
-    duration_ms=DURATION_MS,
-    fps=FPS,
+reveal_heatmapper = Heatmapper(
+    point_diameter=100, point_strength=0.6, normalisation="relative", mode="reveal"
 )
-print("Saved: 04a_no_decay.mp4")
 
-# hard decay — full intensity for 500 ms then vanishes
-vh_hard = VideoHeatmapper(heatmapper, decay_time_ms=500.0)
-vh_hard.heatmap_on_image(
-    img,
-    gaze_points,
-    os.path.join(EXAMPLES_DIR, "04b_hard_decay.mp4"),
-    duration_ms=DURATION_MS,
-    fps=FPS,
-)
-print("Saved: 04b_hard_decay.mp4")
+DECAY_MS = 500.0
 
-# smooth decay — linear fade from full intensity to zero over 500 ms
-vh_smooth = VideoHeatmapper(heatmapper, decay_time_ms=500.0, smooth_decay=True)
-vh_smooth.heatmap_on_image(
-    img,
-    gaze_points,
-    os.path.join(EXAMPLES_DIR, "04c_smooth_decay.mp4"),
-    duration_ms=DURATION_MS,
-    fps=FPS,
-)
-print("Saved: 04c_smooth_decay.mp4")
+for prefix, hm in [
+    ("04a_colour", colour_heatmapper),
+    ("04d_reveal", reveal_heatmapper),
+]:
+    # no decay — each point visible only in its own frame
+    VideoHeatmapper(hm).heatmap_on_image(
+        img,
+        gaze_points,
+        os.path.join(EXAMPLES_DIR, f"{prefix}_no_decay.mp4"),
+        duration_ms=DURATION_MS,
+        fps=FPS,
+    )
+    print(f"Saved: {prefix}_no_decay.mp4")
+
+    # hard decay — full intensity for DECAY_MS then vanishes
+    VideoHeatmapper(hm, decay_time_ms=DECAY_MS).heatmap_on_image(
+        img,
+        gaze_points,
+        os.path.join(EXAMPLES_DIR, f"{prefix}_hard_decay.mp4"),
+        duration_ms=DURATION_MS,
+        fps=FPS,
+    )
+    print(f"Saved: {prefix}_hard_decay.mp4")
+
+    # smooth decay — linear fade from full intensity to zero over DECAY_MS
+    VideoHeatmapper(hm, decay_time_ms=DECAY_MS, smooth_decay=True).heatmap_on_image(
+        img,
+        gaze_points,
+        os.path.join(EXAMPLES_DIR, f"{prefix}_smooth_decay.mp4"),
+        duration_ms=DURATION_MS,
+        fps=FPS,
+    )
+    print(f"Saved: {prefix}_smooth_decay.mp4")
