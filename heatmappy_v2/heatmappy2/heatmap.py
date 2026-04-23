@@ -6,7 +6,7 @@ from typing import Literal
 import cv2
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from heatmappy2.kernels import GaussianKernel
 
@@ -31,15 +31,25 @@ class Point(BaseModel):
     x: float
     y: float
     diameter: int | None = Field(default=None, gt=0)
+    diameter_pct: float | None = Field(default=None, gt=0.0, le=1.0)
     strength: float | None = Field(default=None, ge=0.0, le=1.0)
     sigma: float | None = Field(default=None, gt=0.0)
 
-    @field_validator("diameter")
+    @model_validator(mode="after")
+    def diameter_not_both(self) -> Point:
+        if self.diameter is not None and self.diameter_pct is not None:
+            raise ValueError("specify diameter or diameter_pct, not both")
+        return self
+
     @classmethod
-    def diameter_must_be_positive(cls, v: int | None) -> int | None:
-        if v is not None and v <= 0:
-            raise ValueError("diameter must be a positive integer")
-        return v
+    def from_tuple(cls, t: tuple[float, float]) -> Point:
+        """Convenience constructor from a plain (x, y) tuple with default sizing."""
+        return cls(x=t[0], y=t[1])
+
+
+def points_from_tuples(tuples: list[tuple[float, float]]) -> PointList:
+    """Convert a list of (x, y) tuples to Points using default sizing."""
+    return [Point.from_tuple(t) for t in tuples]
 
 
 class GreyHeatmapper:
@@ -84,13 +94,20 @@ class GreyHeatmapper:
 
         for point in points:
             kernel = self._kernel.get(
-                diameter=point.diameter,
+                diameter=self._resolve_diameter(point, width, height),
                 strength=point.strength,
                 sigma=point.sigma,
             )
             self._stamp(canvas, kernel, int(point.x), int(point.y))
 
         return self._normalise(canvas)
+
+    @staticmethod
+    def _resolve_diameter(point: Point, width: int, height: int) -> int | None:
+        if point.diameter is not None:
+            return point.diameter
+        pct = point.diameter_pct if point.diameter_pct is not None else 0.05
+        return int(min(width, height) * pct)
 
     def _stamp(
         self,
