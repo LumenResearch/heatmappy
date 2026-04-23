@@ -36,29 +36,31 @@ VIDEO_PATH = os.path.join(EXAMPLES_DIR, "SampleVideo_720x480_1mb.mp4")
 
 
 def random_video_points(
-    n_users: int,
-    points_per_user: int,
     width: int,
     height: int,
     duration_ms: float,
-    spread: float = 60.0,
+    fps: float,
+    points_per_frame: int = 100,
+    spread: float | None = None,
 ) -> list[VideoPoint]:
     """
-    Generate clustered VideoPoints for n_users participants.
-    Each user gets a random centre near the image centre, then
-    Gaussian-distributed fixations around that centre spread over time.
+    Generate VideoPoints Gaussian-distributed around the image centre.
+    Produces exactly points_per_frame points for every frame timestamp.
+    spread defaults to min(width, height) / 5.
     """
-    cx, cy = width / 2, height / 2
+    if spread is None:
+        spread = min(width, height) / 5.0
+    cx, cy = width / 2.0, height / 2.0
+    frame_interval_ms = 1000.0 / fps
+    n_frames = int(duration_ms / frame_interval_ms)
     points: list[VideoPoint] = []
-    for _ in range(n_users):
-        ux = random.gauss(cx, spread)
-        uy = random.gauss(cy, spread)
-        for j in range(points_per_user):
-            t = (j / points_per_user) * duration_ms
+    for i in range(n_frames):
+        t = i * frame_interval_ms
+        for _ in range(points_per_frame):
             points.append(
                 VideoPoint(
-                    x=random.gauss(ux, spread * 0.5),
-                    y=random.gauss(uy, spread * 0.5),
+                    x=random.gauss(cx, spread),
+                    y=random.gauss(cy, spread),
                     t=t,
                 )
             )
@@ -75,15 +77,11 @@ H, W = img.shape[:2]
 DURATION_MS = 5_000.0
 FPS = 20.0
 
-gaze_points = random_video_points(
-    n_users=8,
-    points_per_user=30,
-    width=W,
-    height=H,
-    duration_ms=DURATION_MS,
-)
+gaze_points = random_video_points(width=W, height=H, duration_ms=DURATION_MS, fps=FPS)
 
-heatmapper = Heatmapper(point_strength=0.6, normalisation="relative", opacity=0.65)
+heatmapper = Heatmapper(
+    point_diameter=100, point_strength=0.6, normalisation="relative", opacity=0.65
+)
 
 # no decay — each point visible only in its own frame
 vh_no_decay = VideoHeatmapper(heatmapper)
@@ -131,13 +129,7 @@ cap.release()
 
 video_duration_ms = (n_frames / vfps) * 1000.0
 
-video_gaze = random_video_points(
-    n_users=6,
-    points_per_user=40,
-    width=vw,
-    height=vh_px,
-    duration_ms=video_duration_ms,
-)
+video_gaze = random_video_points(width=vw, height=vh_px, duration_ms=video_duration_ms, fps=vfps)
 
 vh_on_video = VideoHeatmapper(heatmapper, decay_time_ms=400.0, smooth_decay=True)
 vh_on_video.heatmap_on_video(
