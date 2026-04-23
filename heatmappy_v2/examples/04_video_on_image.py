@@ -1,18 +1,16 @@
 """
-Example 04 — Video heatmap
+Example 04 — Heatmap video on a static image
 
-Demonstrates VideoHeatmapper with two source types and all three decay modes:
+Renders a 5-second heatmap video over cat.jpg at 20 FPS using all three decay modes:
+  - 04a_no_decay.mp4      point visible only in its own frame
+  - 04b_hard_decay.mp4    full intensity for 500 ms then vanishes
+  - 04c_smooth_decay.mp4  linear fade from full intensity to zero over 500 ms
 
-  Part A — heatmap_on_image: static cat.jpg → 5-second video at 20 FPS
-    - no_decay:     point visible only in its own frame
-    - hard_decay:   point holds full intensity for 500 ms then vanishes
-    - smooth_decay: point fades linearly to zero over 500 ms
-
-  Part B — heatmap_on_video: SampleVideo_720x480_1mb.mp4 → heatmap overlay
-    - smooth_decay over 400 ms; audio is preserved in the output
+All three videos use the same 100 gaze points per frame, Gaussian-distributed
+around the image centre (spread = min(w,h) / 5).
 
 Run from the repo root:
-    python heatmappy_v2/examples/04_video_heatmap.py
+    python heatmappy_v2/examples/04_video_on_image.py
 """
 
 import os
@@ -30,9 +28,9 @@ random.seed(7)
 
 EXAMPLES_DIR = os.path.dirname(__file__)
 CAT_PATH = os.path.join(EXAMPLES_DIR, "cat.jpg")
-VIDEO_PATH = os.path.join(EXAMPLES_DIR, "SampleVideo_720x480_1mb.mp4")
 
-# --------------------------------------------------------------------------- helpers
+DURATION_MS = 5_000.0
+FPS = 20.0
 
 
 def random_video_points(
@@ -44,7 +42,7 @@ def random_video_points(
     spread: float | None = None,
 ) -> list[VideoPoint]:
     """
-    Generate VideoPoints Gaussian-distributed around the image centre.
+    Gaussian-distributed gaze points centred on the image.
     Produces exactly points_per_frame points for every frame timestamp.
     spread defaults to min(width, height) / 5.
     """
@@ -67,15 +65,10 @@ def random_video_points(
     return points
 
 
-# --------------------------------------------------------------------------- Part A
-
 img = cv2.imread(CAT_PATH)
 if img is None:
     raise FileNotFoundError(f"Could not read: {CAT_PATH}")
 H, W = img.shape[:2]
-
-DURATION_MS = 5_000.0
-FPS = 20.0
 
 gaze_points = random_video_points(width=W, height=H, duration_ms=DURATION_MS, fps=FPS)
 
@@ -105,7 +98,7 @@ vh_hard.heatmap_on_image(
 )
 print("Saved: 04b_hard_decay.mp4")
 
-# smooth decay — linear fade from full to zero over 500 ms
+# smooth decay — linear fade from full intensity to zero over 500 ms
 vh_smooth = VideoHeatmapper(heatmapper, decay_time_ms=500.0, smooth_decay=True)
 vh_smooth.heatmap_on_image(
     img,
@@ -115,26 +108,3 @@ vh_smooth.heatmap_on_image(
     fps=FPS,
 )
 print("Saved: 04c_smooth_decay.mp4")
-
-# --------------------------------------------------------------------------- Part B
-
-cap = cv2.VideoCapture(VIDEO_PATH)
-if not cap.isOpened():
-    raise FileNotFoundError(f"Could not open: {VIDEO_PATH}")
-vfps = cap.get(cv2.CAP_PROP_FPS)
-vw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-vh_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-cap.release()
-
-video_duration_ms = (n_frames / vfps) * 1000.0
-
-video_gaze = random_video_points(width=vw, height=vh_px, duration_ms=video_duration_ms, fps=vfps)
-
-vh_on_video = VideoHeatmapper(heatmapper, decay_time_ms=400.0, smooth_decay=True)
-vh_on_video.heatmap_on_video(
-    VIDEO_PATH,
-    video_gaze,
-    os.path.join(EXAMPLES_DIR, "04d_on_video.mp4"),
-)
-print("Saved: 04d_on_video.mp4 (audio preserved)")
