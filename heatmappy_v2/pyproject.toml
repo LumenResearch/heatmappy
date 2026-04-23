@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "heatmappy2"
+version = "0.1.0"
+description = "Draw image and video heatmaps in python"
+authors = [{ name = "Lumen Research", email = "development@lumen-research.com" }]
+requires-python = ">=3.11"
+keywords = ["image", "video", "heatmap", "heat map", "opencv"]
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    "numpy>=2.4.4",
+    "opencv-python>=4.13.0",
+    "ffmpeg-python>=0.2.0",
+    "Pillow>=11.3.0",
+    "pydantic>=2.13.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["heatmappy2"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

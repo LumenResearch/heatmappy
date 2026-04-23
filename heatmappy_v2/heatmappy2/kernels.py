@@ -1,34 +1,51 @@
+from __future__ import annotations
+
 import numpy as np
+from numpy.typing import NDArray
 
 
 class GaussianKernel:
     """
     Generates and caches 2D Gaussian kernels for heatmap point rendering.
-    Each unique (diameter, strength, sigma) combination is generated once and reused.
+    Each unique (diameter, strength, sigma, threshold) combination is generated
+    once and reused across all heatmap calls.
     """
 
-    def __init__(self, diameter=50, strength=0.5, sigma=None, threshold=0.01):
+    def __init__(
+        self,
+        diameter: int = 50,
+        strength: float = 0.5,
+        sigma: float | None = None,
+        threshold: float = 0.01,
+    ) -> None:
         """
-        :param diameter: size of the kernel in pixels (must be odd; even values are incremented by 1)
-        :param strength: peak intensity of the kernel, between 0 and 1
-        :param sigma: standard deviation of the Gaussian; defaults to diameter / 6
-        :param threshold: values below this fraction of the peak are zeroed out,
-                          preventing invisible fringe pixels from affecting normalisation
+        :param diameter: default kernel size in pixels; even values are bumped to odd
+        :param strength: default peak intensity (0–1)
+        :param sigma: default Gaussian std dev; defaults to diameter / 6
+        :param threshold: values below threshold * strength are zeroed to remove
+                          invisible fringe pixels that distort min_intensity behaviour
         """
-        self.diameter = diameter if diameter % 2 == 1 else diameter + 1
-        self.strength = strength
-        self.sigma = sigma if sigma is not None else self.diameter / 6
-        self.threshold = threshold
-        self._cache = {}
+        self.diameter: int = diameter if diameter % 2 == 1 else diameter + 1
+        self.strength: float = strength
+        self.sigma: float = sigma if sigma is not None else self.diameter / 6
+        self.threshold: float = threshold
+        self._cache: dict[tuple[int, float, float, float], NDArray[np.float32]] = {}
 
-    def get(self, diameter=None, strength=None, sigma=None):
+    def get(
+        self,
+        diameter: int | None = None,
+        strength: float | None = None,
+        sigma: float | None = None,
+    ) -> NDArray[np.float32]:
         """
-        Returns a 2D float32 numpy array for the given parameters.
-        Uses instance defaults if parameters are not provided.
-        Results are cached by (diameter, strength, sigma, threshold).
+        Return a cached 2D float32 kernel for the given parameters.
+        Falls back to instance defaults for any parameter not provided.
+        When a per-call diameter is given without a sigma, sigma is derived
+        from that diameter so the Gaussian scales proportionally.
         """
         d = diameter if diameter is not None else self.diameter
         s = strength if strength is not None else self.strength
+
         if sigma is not None:
             sig = sigma
         elif diameter is not None:
@@ -44,17 +61,22 @@ class GaussianKernel:
         return self._cache[key]
 
     @staticmethod
-    def _generate(diameter, strength, sigma, threshold):
+    def _generate(
+        diameter: int,
+        strength: float,
+        sigma: float,
+        threshold: float,
+    ) -> NDArray[np.float32]:
         center = diameter // 2
         ys, xs = np.ogrid[:diameter, :diameter]
         dist_sq = (xs - center) ** 2 + (ys - center) ** 2
-        kernel = np.exp(-dist_sq / (2 * sigma ** 2)).astype(np.float32)
+        kernel: NDArray[np.float32] = np.exp(-dist_sq / (2 * sigma**2)).astype(np.float32)
         kernel = (kernel / kernel.max()) * strength
         kernel[kernel < threshold * strength] = 0.0
         return kernel
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         self._cache.clear()
 
-    def cache_size(self):
+    def cache_size(self) -> int:
         return len(self._cache)

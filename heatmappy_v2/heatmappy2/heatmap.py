@@ -1,61 +1,84 @@
-from dataclasses import dataclass
-from typing import Optional
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Literal
 
 import cv2
 import numpy as np
+from numpy.typing import NDArray
+from pydantic import BaseModel, Field, field_validator
 
 from heatmappy2.kernels import GaussianKernel
 
-
-COLORMAPS = {
-    'jet':     cv2.COLORMAP_JET,
-    'hot':     cv2.COLORMAP_HOT,
-    'inferno': cv2.COLORMAP_INFERNO,
-    'plasma':  cv2.COLORMAP_PLASMA,
-    'viridis': cv2.COLORMAP_VIRIDIS,
-    'turbo':   cv2.COLORMAP_TURBO,
-    'bone':    cv2.COLORMAP_BONE,
+COLORMAPS: dict[str, int] = {
+    "jet": cv2.COLORMAP_JET,
+    "hot": cv2.COLORMAP_HOT,
+    "inferno": cv2.COLORMAP_INFERNO,
+    "plasma": cv2.COLORMAP_PLASMA,
+    "viridis": cv2.COLORMAP_VIRIDIS,
+    "turbo": cv2.COLORMAP_TURBO,
+    "bone": cv2.COLORMAP_BONE,
 }
 
+NormalisationMode = Literal["relative", "absolute", "raw"]
+HeatmapMode = Literal["colour", "reveal"]
+PointList = list["Point"]
 
-@dataclass
-class Point:
+
+class Point(BaseModel):
+    """A single gaze or attention point with optional per-point kernel overrides."""
+
     x: float
     y: float
-    diameter: Optional[int] = None
-    strength: Optional[float] = None
-    sigma: Optional[float] = None
+    diameter: int | None = Field(default=None, gt=0)
+    strength: float | None = Field(default=None, ge=0.0, le=1.0)
+    sigma: float | None = Field(default=None, gt=0.0)
+
+    @field_validator("diameter")
+    @classmethod
+    def diameter_must_be_positive(cls, v: int | None) -> int | None:
+        if v is not None and v <= 0:
+            raise ValueError("diameter must be a positive integer")
+        return v
 
 
 class GreyHeatmapper:
-    def __init__(self,
-                 point_diameter=50,
-                 point_strength=0.5,
-                 sigma=None,
-                 normalisation='relative',
-                 ceiling=None,
-                 min_intensity=0.0):
+    """
+    Renders a greyscale heatmap from a list of Points onto a float32 canvas,
+    then normalises and returns a uint8 image.
+    """
+
+    def __init__(
+        self,
+        point_diameter: int = 50,
+        point_strength: float = 0.5,
+        sigma: float | None = None,
+        normalisation: NormalisationMode = "relative",
+        ceiling: float | None = None,
+        min_intensity: float = 0.0,
+    ) -> None:
         """
         :param point_diameter: default kernel diameter in pixels
         :param point_strength: default kernel peak intensity (0–1)
         :param sigma: default Gaussian sigma; defaults to point_diameter / 6
         :param normalisation: 'relative', 'absolute', or 'raw'
-            - relative: hottest point = full brightness
-            - absolute: normalise against a fixed ceiling (number of people / fixations)
-            - raw: no normalisation, values passed through as-is
-        :param ceiling: required for absolute normalisation
-        :param min_intensity: floor (0–1) applied to all non-zero pixels after
-                              normalisation, preventing sparse data from being invisible
+        :param ceiling: required for absolute normalisation (e.g. total participant count)
+        :param min_intensity: floor (0–1) applied to non-zero pixels after normalisation
         """
         self._kernel = GaussianKernel(point_diameter, point_strength, sigma)
-        self.normalisation = normalisation
-        self.ceiling = ceiling
-        self.min_intensity = min_intensity
+        self.normalisation: NormalisationMode = normalisation
+        self.ceiling: float | None = ceiling
+        self.min_intensity: float = min_intensity
 
-    def heatmap(self, width, height, points):
+    def heatmap(
+        self,
+        width: int,
+        height: int,
+        points: PointList,
+    ) -> NDArray[np.uint8]:
         """
-        :param points: iterable of Point objects
-        :return: uint8 greyscale numpy array of shape (height, width)
+        :param points: list of Point objects
+        :return: uint8 greyscale array of shape (height, width)
         """
         canvas = np.zeros((height, width), dtype=np.float32)
 
@@ -69,7 +92,13 @@ class GreyHeatmapper:
 
         return self._normalise(canvas)
 
-    def _stamp(self, canvas, kernel, x, y):
+    def _stamp(
+        self,
+        canvas: NDArray[np.float32],
+        kernel: NDArray[np.float32],
+        x: int,
+        y: int,
+    ) -> None:
         kh, kw = kernel.shape
         half_h, half_w = kh // 2, kw // 2
 
@@ -89,21 +118,19 @@ class GreyHeatmapper:
 
         canvas[cy0:cy1, cx0:cx1] += kernel[ky0:ky1, kx0:kx1]
 
-    def _normalise(self, canvas):
-        max_val = canvas.max()
+    def _normalise(self, canvas: NDArray[np.float32]) -> NDArray[np.uint8]:
+        max_val = float(canvas.max())
         if max_val == 0:
             return np.zeros(canvas.shape, dtype=np.uint8)
 
-        if self.normalisation == 'relative':
+        if self.normalisation == "relative":
             normalised = canvas / max_val
-        elif self.normalisation == 'absolute':
+        elif self.normalisation == "absolute":
             if self.ceiling is None:
                 raise ValueError("ceiling must be set when using absolute normalisation")
             normalised = canvas / self.ceiling
-        elif self.normalisation == 'raw':
+        else:  # raw
             normalised = canvas.copy()
-        else:
-            raise ValueError(f"Unknown normalisation mode: '{self.normalisation}'")
 
         normalised = np.clip(normalised, 0.0, 1.0)
 
@@ -111,27 +138,33 @@ class GreyHeatmapper:
             mask = normalised > 0
             normalised[mask] = np.clip(normalised[mask], self.min_intensity, 1.0)
 
-        return (normalised * 255).astype(np.uint8)
+        result: NDArray[np.uint8] = (normalised * 255).astype(np.uint8)
+        return result
 
 
 class Heatmapper:
-    def __init__(self,
-                 point_diameter=50,
-                 point_strength=0.5,
-                 sigma=None,
-                 normalisation='relative',
-                 ceiling=None,
-                 min_intensity=0.0,
-                 mode='colour',
-                 colormap='jet',
-                 opacity=0.65):
+    """
+    High-level heatmap renderer. Wraps GreyHeatmapper and applies
+    colour or reveal compositing over a base image.
+    """
+
+    def __init__(
+        self,
+        point_diameter: int = 50,
+        point_strength: float = 0.5,
+        sigma: float | None = None,
+        normalisation: NormalisationMode = "relative",
+        ceiling: float | None = None,
+        min_intensity: float = 0.0,
+        mode: HeatmapMode = "colour",
+        colormap: str = "jet",
+        opacity: float = 0.65,
+    ) -> None:
         """
-        :param mode: 'colour' or 'reveal'
-            - colour: colourised heatmap composited over the image
-            - reveal: image is shown where attention is high, darkened where attention is low
-        :param colormap: name from COLORMAPS dict, used in colour mode only
-        :param opacity: max opacity of the heatmap overlay (0–1), colour mode only
-        All other params are passed through to GreyHeatmapper.
+        :param mode: 'colour' overlays a colourised heatmap; 'reveal' shows the image
+                     only where attention is high, darkening unattended areas
+        :param colormap: one of: jet, hot, inferno, plasma, viridis, turbo, bone
+        :param opacity: max heatmap opacity (0–1), colour mode only
         """
         self._grey = GreyHeatmapper(
             point_diameter=point_diameter,
@@ -141,51 +174,67 @@ class Heatmapper:
             ceiling=ceiling,
             min_intensity=min_intensity,
         )
-        self.mode = mode
-        self.opacity = opacity
+        self.mode: HeatmapMode = mode
+        self.opacity: float = opacity
 
-        if isinstance(colormap, str):
-            if colormap not in COLORMAPS:
-                raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {list(COLORMAPS)}")
-            self.colormap = COLORMAPS[colormap]
-        else:
-            self.colormap = colormap
+        if colormap not in COLORMAPS:
+            raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {list(COLORMAPS)}")
+        self.colormap: int = COLORMAPS[colormap]
 
-    def heatmap(self, width, height, points, base_img=None):
+    def heatmap(
+        self,
+        width: int,
+        height: int,
+        points: PointList,
+        base_img: NDArray[np.uint8] | None = None,
+    ) -> NDArray[np.uint8]:
         """
-        :param base_img: BGR numpy array; if None returns heatmap without background
-        :return: BGR numpy array
+        :param base_img: BGR uint8 numpy array; required for reveal mode
+        :return: BGR uint8 numpy array
         """
         grey = self._grey.heatmap(width, height, points)
 
-        if self.mode == 'colour':
+        if self.mode == "colour":
             return self._colour(grey, base_img)
-        elif self.mode == 'reveal':
+        else:
             if base_img is None:
                 raise ValueError("base_img is required for reveal mode")
             return self._reveal(grey, base_img)
-        else:
-            raise ValueError(f"Unknown mode '{self.mode}'. Choose 'colour' or 'reveal'")
 
-    def heatmap_on_img(self, points, img):
+    def heatmap_on_img(
+        self,
+        points: PointList,
+        img: NDArray[np.uint8],
+    ) -> NDArray[np.uint8]:
         h, w = img.shape[:2]
         return self.heatmap(w, h, points, base_img=img)
 
-    def heatmap_on_img_path(self, points, img_path):
-        img = cv2.imread(img_path)
-        return self.heatmap_on_img(points, img)
+    def heatmap_on_img_path(
+        self,
+        points: PointList,
+        img_path: str | Path,
+    ) -> NDArray[np.uint8]:
+        raw: NDArray[np.uint8] | None = cv2.imread(str(img_path))  # type: ignore[assignment]
+        if raw is None:
+            raise FileNotFoundError(f"Could not read image: {img_path}")
+        return self.heatmap_on_img(points, raw)
 
-    def _colour(self, grey, base_img):
-        coloured = cv2.applyColorMap(grey, self.colormap)
-
+    def _colour(
+        self,
+        grey: NDArray[np.uint8],
+        base_img: NDArray[np.uint8] | None,
+    ) -> NDArray[np.uint8]:
+        coloured: NDArray[np.uint8] = cv2.applyColorMap(grey, self.colormap)  # type: ignore[assignment]
         if base_img is None:
             return coloured
-
         alpha = (grey / 255.0 * self.opacity)[:, :, np.newaxis]
-        return (coloured * alpha + base_img * (1.0 - alpha)).astype(np.uint8)
+        blended: np.ndarray = coloured * alpha + base_img * (1.0 - alpha)
+        return blended.astype(np.uint8)
 
-    def _reveal(self, grey, base_img):
-        # hot areas (high attention) reveal image at full brightness
-        # cold areas fade to black
+    def _reveal(
+        self,
+        grey: NDArray[np.uint8],
+        base_img: NDArray[np.uint8],
+    ) -> NDArray[np.uint8]:
         reveal = (grey / 255.0)[:, :, np.newaxis]
         return (base_img * reveal).astype(np.uint8)
