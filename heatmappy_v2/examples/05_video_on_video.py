@@ -3,13 +3,16 @@ Example 05 — Heatmap video on an existing video
 
 Renders heatmap overlays over SampleVideo_720x480_1mb.mp4.
 FPS is read from the source; audio is preserved in all outputs.
-Colour and reveal modes, each with all three decay variants:
+Colour, reveal, and pair (colour+reveal side-by-side) modes, each with all three decay variants:
   - 05a_colour_no_decay.mp4       colour | point visible only in its own frame
-  - 05b_colour_hard_decay.mp4     colour | full intensity for 400 ms then vanishes
-  - 05c_colour_smooth_decay.mp4   colour | linear fade to zero over 400 ms
+  - 05a_colour_hard_decay.mp4     colour | full intensity for 400 ms then vanishes
+  - 05a_colour_smooth_decay.mp4   colour | linear fade to zero over 400 ms
   - 05d_reveal_no_decay.mp4       reveal | point visible only in its own frame
-  - 05e_reveal_hard_decay.mp4     reveal | full intensity for 400 ms then vanishes
-  - 05f_reveal_smooth_decay.mp4   reveal | linear fade to zero over 400 ms
+  - 05d_reveal_hard_decay.mp4     reveal | full intensity for 400 ms then vanishes
+  - 05d_reveal_smooth_decay.mp4   reveal | linear fade to zero over 400 ms
+  - 05g_pair_no_decay.mp4         pair   | point visible only in its own frame
+  - 05g_pair_hard_decay.mp4       pair   | full intensity for 400 ms then vanishes
+  - 05g_pair_smooth_decay.mp4     pair   | linear fade to zero over 400 ms
 
 All six videos use the same 100 gaze points per frame, Gaussian-distributed
 around the video centre (spread = min(w,h) / 5).
@@ -89,10 +92,14 @@ colour_heatmapper = Heatmapper(
 reveal_heatmapper = Heatmapper(
     point_diameter=100, point_strength=0.6, normalisation="relative", mode="reveal"
 )
+pair_heatmapper = Heatmapper(
+    point_diameter=100, point_strength=0.6, normalisation="relative", opacity=0.65, mode="pair"
+)
 
 for prefix, hm in [
     ("05a_colour", colour_heatmapper),
     ("05d_reveal", reveal_heatmapper),
+    ("05g_pair", pair_heatmapper),
 ]:
     # no decay — each point visible only in its own frame
     VideoHeatmapper(hm).heatmap_on_video(

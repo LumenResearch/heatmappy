@@ -21,7 +21,7 @@ COLORMAPS: dict[str, int] = {
 }
 
 NormalisationMode = Literal["relative", "absolute", "raw"]
-HeatmapMode = Literal["colour", "reveal"]
+HeatmapMode = Literal["colour", "reveal", "pair"]
 PointList = list["Point"]
 
 
@@ -198,6 +198,10 @@ class Heatmapper:
             raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {list(COLORMAPS)}")
         self.colormap: int = COLORMAPS[colormap]
 
+    def output_shape(self, height: int, width: int) -> tuple[int, int]:
+        """Return (out_height, out_width) for a source frame of the given size."""
+        return (height, width * 2) if self.mode == "pair" else (height, width)
+
     def heatmap(
         self,
         width: int,
@@ -206,17 +210,21 @@ class Heatmapper:
         base_img: NDArray[np.uint8] | None = None,
     ) -> NDArray[np.uint8]:
         """
-        :param base_img: BGR uint8 numpy array; required for reveal mode
-        :return: BGR uint8 numpy array
+        :param base_img: BGR uint8 numpy array; required for reveal and pair modes
+        :return: BGR uint8 numpy array (double-width for pair mode)
         """
         grey = self._grey.heatmap(width, height, points)
 
         if self.mode == "colour":
             return self._colour(grey, base_img)
-        else:
+        elif self.mode == "reveal":
             if base_img is None:
                 raise ValueError("base_img is required for reveal mode")
             return self._reveal(grey, base_img)
+        else:  # pair
+            if base_img is None:
+                raise ValueError("base_img is required for pair mode")
+            return self._pair(grey, base_img)
 
     def heatmap_on_img(
         self,
@@ -255,3 +263,13 @@ class Heatmapper:
     ) -> NDArray[np.uint8]:
         reveal = (grey / 255.0)[:, :, np.newaxis]
         return (base_img * reveal).astype(np.uint8)
+
+    def _pair(
+        self,
+        grey: NDArray[np.uint8],
+        base_img: NDArray[np.uint8],
+    ) -> NDArray[np.uint8]:
+        left: NDArray[np.uint8] = self._colour(grey, base_img)
+        right: NDArray[np.uint8] = self._reveal(grey, base_img)
+        result: NDArray[np.uint8] = np.hstack([left, right])
+        return result

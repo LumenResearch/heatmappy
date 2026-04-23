@@ -74,11 +74,12 @@ class VideoHeatmapper:
         :param fps: output frame rate (default 20)
         """
         h, w = base_img.shape[:2]
+        out_h, out_w = self._heatmapper.output_shape(h, w)
         frame_interval_ms = 1000.0 / fps
         snapped = self._snap_points(points, frame_interval_ms)
         n_frames = int(duration_ms / frame_interval_ms)
 
-        writer = self._make_writer(str(output_path), fps, w, h)
+        writer = self._make_writer(str(output_path), fps, out_w, out_h)
         try:
             for i in range(n_frames):
                 frame_time_ms = i * frame_interval_ms
@@ -124,6 +125,7 @@ class VideoHeatmapper:
         fps = cap.get(cv2.CAP_PROP_FPS)
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        out_h, out_w = self._heatmapper.output_shape(h, w)
         frame_interval_ms = 1000.0 / fps
         snapped = self._snap_points(points, frame_interval_ms)
         has_audio = self._check_audio(str(video_path))
@@ -136,7 +138,7 @@ class VideoHeatmapper:
                 tmp_path = tmp.name
             video_out = tmp_path
 
-        writer = self._make_writer(video_out, fps, w, h)
+        writer = self._make_writer(video_out, fps, out_w, out_h)
         try:
             frame_index = 0
             while True:
