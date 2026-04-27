@@ -10,7 +10,6 @@ import pytest
 from heatmappy2.heatmap import Heatmapper
 from heatmappy2.video import VideoHeatmapper, VideoPoint
 
-
 # ------------------------------------------------------------------ helpers
 
 

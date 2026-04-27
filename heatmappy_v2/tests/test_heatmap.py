@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from heatmappy2.heatmap import GreyHeatmapper, Heatmapper, Point, points_from_tuples
 
@@ -13,7 +14,7 @@ BASE = np.full((80, 100, 3), 128, dtype=np.uint8)
 
 
 def test_point_diameter_and_pct_conflict() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Point(x=10, y=10, diameter=50, diameter_pct=0.2)
 
 
