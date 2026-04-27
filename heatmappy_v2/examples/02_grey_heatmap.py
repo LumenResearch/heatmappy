@@ -24,7 +24,11 @@ from heatmappy2.heatmap import GreyHeatmapper, Point, points_from_tuples
 
 random.seed(42)
 
-IMG_PATH = os.path.join(os.path.dirname(__file__), "cat.jpg")
+EXAMPLES_DIR = os.path.dirname(__file__)
+OUTPUT_DIR = os.path.join(EXAMPLES_DIR, "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+IMG_PATH = os.path.join(EXAMPLES_DIR, "cat.jpg")
 img = cv2.imread(IMG_PATH)
 H, W = img.shape[:2]
 
@@ -103,7 +107,7 @@ row1 = np.hstack([p1, p2, p3, p4])
 row2 = np.hstack([p5, p6, p7, p8])
 output = np.vstack([row1, row2])
 
-out_path = os.path.join(os.path.dirname(__file__), "02_grey_heatmap.png")
+out_path = os.path.join(OUTPUT_DIR, "02_grey_heatmap.png")
 cv2.imwrite(out_path, output)
 print(f"Saved: {out_path}")
 
