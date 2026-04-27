@@ -29,6 +29,10 @@ class VideoHeatmapper:
     - heatmap_on_image: static base image + gaze points → video at chosen FPS
     - heatmap_on_video: video file + gaze points → video at source FPS with audio preserved
 
+    Both methods accept optional start_ms / end_ms to render only a sub-window.
+    Gaze points whose timestamp falls just before start_ms are included when
+    their decay tail extends into the window.
+
     Decay modes (controlled by decay_time_ms and smooth_decay):
     - Neither set              → point appears only in its own frame
     - decay_time_ms set only   → full intensity for decay_time_ms then vanishes
@@ -63,6 +67,8 @@ class VideoHeatmapper:
         output_path: str | Path,
         duration_ms: float,
         fps: float = 20.0,
+        start_ms: float = 0.0,
+        end_ms: float | None = None,
     ) -> None:
         """
         Render a heatmap video from a static base image.
@@ -70,24 +76,25 @@ class VideoHeatmapper:
         :param base_img: BGR uint8 numpy array
         :param points: time-series gaze points
         :param output_path: path to write the output .mp4
-        :param duration_ms: total video duration in milliseconds
+        :param duration_ms: total length of the gaze timeline in milliseconds
         :param fps: output frame rate (default 20)
+        :param start_ms: start of the render window (gaze timeline); default 0
+        :param end_ms: end of the render window; capped at duration_ms; default full duration
         """
+        t_start, t_end = self._clamp_window(start_ms, end_ms, duration_ms)
+
         h, w = base_img.shape[:2]
         out_h, out_w = self._heatmapper.output_shape(h, w)
         frame_interval_ms = 1000.0 / fps
         snapped = self._snap_points(points, frame_interval_ms)
-        n_frames = int(duration_ms / frame_interval_ms)
+        n_frames = int((t_end - t_start) / frame_interval_ms)
 
         writer = self._make_writer(str(output_path), fps, out_w, out_h)
         try:
             for i in range(n_frames):
-                frame_time_ms = i * frame_interval_ms
+                frame_time_ms = t_start + i * frame_interval_ms
                 active = self._active_points(frame_time_ms, snapped, frame_interval_ms)
-                frame = (
-                    self._heatmapper.heatmap_on_img(active, base_img) if active else base_img.copy()
-                )
-                writer.write(frame)
+                writer.write(self._heatmapper.heatmap_on_img(active, base_img))
         finally:
             writer.release()
 
@@ -98,17 +105,21 @@ class VideoHeatmapper:
         output_path: str | Path,
         duration_ms: float,
         fps: float = 20.0,
+        start_ms: float = 0.0,
+        end_ms: float | None = None,
     ) -> None:
         img: NDArray[np.uint8] | None = cv2.imread(str(img_path))  # type: ignore[assignment]
         if img is None:
             raise FileNotFoundError(f"Could not read image: {img_path}")
-        self.heatmap_on_image(img, points, output_path, duration_ms, fps)
+        self.heatmap_on_image(img, points, output_path, duration_ms, fps, start_ms, end_ms)
 
     def heatmap_on_video(
         self,
         video_path: str | Path,
         points: VideoPointList,
         output_path: str | Path,
+        start_ms: float = 0.0,
+        end_ms: float | None = None,
     ) -> None:
         """
         Render a heatmap video over an existing video.
@@ -117,6 +128,8 @@ class VideoHeatmapper:
         :param video_path: path to the source video
         :param points: time-series gaze points
         :param output_path: path to write the output .mp4
+        :param start_ms: start of the render window (video timeline); default 0
+        :param end_ms: end of the render window; capped at video duration; default full video
         """
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
@@ -125,10 +138,19 @@ class VideoHeatmapper:
         fps = cap.get(cv2.CAP_PROP_FPS)
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        video_duration_ms = (total_frames / fps) * 1000.0
+
+        t_start, t_end = self._clamp_window(start_ms, end_ms, video_duration_ms)
+
         out_h, out_w = self._heatmapper.output_shape(h, w)
         frame_interval_ms = 1000.0 / fps
         snapped = self._snap_points(points, frame_interval_ms)
         has_audio = self._check_audio(str(video_path))
+
+        # seek to start frame
+        start_frame_idx = int(t_start / frame_interval_ms)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame_idx)
 
         # if audio needs muxing, write video frames to a temp file first
         tmp_path: str | None = None
@@ -145,21 +167,33 @@ class VideoHeatmapper:
                 ret, frame = cap.read()
                 if not ret:
                     break
-                frame_time_ms = frame_index * frame_interval_ms
+                frame_time_ms = t_start + frame_index * frame_interval_ms
+                if frame_time_ms >= t_end:
+                    break
                 active = self._active_points(frame_time_ms, snapped, frame_interval_ms)
-                if active:
-                    frame = self._heatmapper.heatmap_on_img(active, frame)  # type: ignore[arg-type]
-                writer.write(frame)
+                writer.write(self._heatmapper.heatmap_on_img(active, frame))  # type: ignore[arg-type]
                 frame_index += 1
         finally:
             cap.release()
             writer.release()
 
         if has_audio and tmp_path:
-            self._mux_audio(str(video_path), tmp_path, str(output_path))
+            self._mux_audio(str(video_path), tmp_path, str(output_path), t_start, t_end)
             Path(tmp_path).unlink()
 
     # ----------------------------------------------------------------- private
+
+    @staticmethod
+    def _clamp_window(
+        start_ms: float,
+        end_ms: float | None,
+        max_ms: float,
+    ) -> tuple[float, float]:
+        t_start = max(0.0, start_ms)
+        t_end = min(max_ms, end_ms if end_ms is not None else max_ms)
+        if t_end <= t_start:
+            raise ValueError(f"end_ms ({t_end:.1f}) must be greater than start_ms ({t_start:.1f})")
+        return t_start, t_end
 
     @staticmethod
     def _snap_points(points: VideoPointList, frame_interval_ms: float) -> VideoPointList:
@@ -230,9 +264,18 @@ class VideoHeatmapper:
             return False
 
     @staticmethod
-    def _mux_audio(source_video: str, silent_video: str, output_path: str) -> None:
+    def _mux_audio(
+        source_video: str,
+        silent_video: str,
+        output_path: str,
+        start_ms: float = 0.0,
+        end_ms: float | None = None,
+    ) -> None:
         video_in = ffmpeg.input(silent_video)
-        audio_in = ffmpeg.input(source_video).audio
+        audio_input_kwargs: dict[str, float] = {"ss": start_ms / 1000.0}
+        if end_ms is not None:
+            audio_input_kwargs["to"] = end_ms / 1000.0
+        audio_in = ffmpeg.input(source_video, **audio_input_kwargs).audio
         (
             ffmpeg.output(
                 video_in,

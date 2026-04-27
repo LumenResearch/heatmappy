@@ -125,6 +125,24 @@ for prefix, hm in [
     )
     print(f"Saved: {prefix}_smooth_decay.mp4")
 
+# --------------------------------------------------------------------------- windowed clip
+# Render only the middle third of the video (start_ms / end_ms).
+# Smooth-decay gaze points that started just before the window are still
+# visible at the beginning of the clip because _active_points uses absolute
+# timestamps — no special handling required.
+
+clip_start_ms = duration_ms / 3
+clip_end_ms = 2 * duration_ms / 3
+
+VideoHeatmapper(colour_heatmapper, decay_time_ms=DECAY_MS, smooth_decay=True).heatmap_on_video(
+    VIDEO_PATH,
+    gaze_points,
+    os.path.join(EXAMPLES_DIR, "05_windowed_clip.mp4"),
+    start_ms=clip_start_ms,
+    end_ms=clip_end_ms,
+)
+print(f"Saved: 05_windowed_clip.mp4  ({clip_start_ms:.0f}–{clip_end_ms:.0f} ms)")
+
 # --------------------------------------------------------------------------- grid
 
 GRID_CELLS = [

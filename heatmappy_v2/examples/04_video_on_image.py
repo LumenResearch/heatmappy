@@ -127,6 +127,22 @@ for prefix, hm in [
     )
     print(f"Saved: {prefix}_smooth_decay.mp4")
 
+# --------------------------------------------------------------------------- windowed clip
+# Render only seconds 5–15 of the 20-second gaze timeline.
+# end_ms is capped at DURATION_MS; smooth-decay points just before 5 s
+# are automatically included via the existing decay weight logic.
+
+VideoHeatmapper(colour_heatmapper, decay_time_ms=DECAY_MS, smooth_decay=True).heatmap_on_image(
+    img,
+    gaze_points,
+    os.path.join(EXAMPLES_DIR, "04_windowed_clip.mp4"),
+    duration_ms=DURATION_MS,
+    fps=FPS,
+    start_ms=5_000.0,
+    end_ms=15_000.0,
+)
+print("Saved: 04_windowed_clip.mp4  (5 000–15 000 ms)")
+
 # --------------------------------------------------------------------------- grid
 
 GRID_CELLS = [
