@@ -43,8 +43,8 @@ class Point(BaseModel):
 
     @classmethod
     def from_tuple(cls, t: tuple[float, float]) -> Point:
-        """Convenience constructor from a plain (x, y) tuple with default sizing."""
-        return cls(x=t[0], y=t[1])
+        """Convenience constructor from a plain (x, y) tuple. Defaults to 20% of image size."""
+        return cls(x=t[0], y=t[1], diameter_pct=0.20)
 
 
 def points_from_tuples(tuples: list[tuple[float, float]]) -> PointList:
@@ -102,12 +102,12 @@ class GreyHeatmapper:
 
         return self._normalise(canvas)
 
-    @staticmethod
-    def _resolve_diameter(point: Point, width: int, height: int) -> int | None:
+    def _resolve_diameter(self, point: Point, width: int, height: int) -> int:
         if point.diameter is not None:
             return point.diameter
-        pct = point.diameter_pct if point.diameter_pct is not None else 0.20
-        return int(min(width, height) * pct)
+        if point.diameter_pct is not None:
+            return int(min(width, height) * point.diameter_pct)
+        return self._kernel.diameter
 
     def _stamp(
         self,

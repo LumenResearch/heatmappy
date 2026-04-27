@@ -10,6 +10,7 @@ and the three ways to specify point size:
 Run from the repo root:
     python heatmappy_v2/examples/02_grey_heatmap.py
 """
+
 import os
 import random
 import sys
@@ -46,9 +47,12 @@ hm = GreyHeatmapper(point_strength=0.5, normalisation="relative")
 
 # --- Row 1: normalisation modes ---
 
-# 150 random points via bulk tuple conversion — size defaults to 5% of min(W, H)
+# 150 random points via bulk tuple conversion — from_tuple sets diameter_pct=0.20
 all_150_points = points_from_tuples(make_random_tuples(150))
-p1 = labelled(hm.heatmap(W, H, all_150_points), f"150 people | bulk tuples | default 20% = {int(min(W,H)*0.20)}px")
+p1 = labelled(
+    hm.heatmap(W, H, all_150_points),
+    f"150 people | bulk tuples | default 20% = {int(min(W, H) * 0.20)}px",
+)
 
 # 3 singled-out participants — relative (misleading: looks as bright as 150)
 three_points = make_clustered_points(3, cx=W // 3, cy=H // 2, spread=30)
@@ -59,17 +63,16 @@ hm_abs = GreyHeatmapper(point_strength=0.5, normalisation="absolute", ceiling=15
 p3 = labelled(hm_abs.heatmap(W, H, three_points), "3 people | absolute ceiling=150")
 
 # 3 people — absolute + min_intensity floor so they stay visible
-hm_floor = GreyHeatmapper(point_strength=0.5, normalisation="absolute", ceiling=150, min_intensity=0.2)
+hm_floor = GreyHeatmapper(
+    point_strength=0.5, normalisation="absolute", ceiling=150, min_intensity=0.2
+)
 p4 = labelled(hm_floor.heatmap(W, H, three_points), "3 people | absolute + min_intensity=0.2")
 
 # --- Row 2: point sizing modes side by side ---
 
-# Bulk tuples — all get 5% default
+# Bulk tuples — from_tuple sets diameter_pct=0.20
 bulk_points = points_from_tuples(make_random_tuples(40))
-p5 = labelled(
-    hm.heatmap(W, H, bulk_points),
-    f"bulk default | 20% = {int(min(W, H) * 0.20)}px"
-)
+p5 = labelled(hm.heatmap(W, H, bulk_points), f"bulk default | 20% = {int(min(W, H) * 0.20)}px")
 
 # diameter_pct — each point sized relative to image
 pct_points = [
@@ -77,10 +80,7 @@ pct_points = [
     Point(x=W * 0.5, y=H * 0.5, diameter_pct=0.08),
     Point(x=W * 0.8, y=H * 0.5, diameter_pct=0.15),
 ]
-p6 = labelled(
-    hm.heatmap(W, H, pct_points),
-    f"diameter_pct | 3% / 8% / 15% of {min(W, H)}px"
-)
+p6 = labelled(hm.heatmap(W, H, pct_points), f"diameter_pct | 3% / 8% / 15% of {min(W, H)}px")
 
 # diameter — absolute pixels, image-size independent
 px_points = [
@@ -92,12 +92,12 @@ p7 = labelled(hm.heatmap(W, H, px_points), "diameter px | 20 / 60 / 120px")
 
 # mixed — some absolute, some pct, some default
 mixed_points = [
-    Point(x=W * 0.15, y=H * 0.5),                        # default 20%
-    Point(x=W * 0.4,  y=H * 0.5, diameter_pct=0.20),     # 20% pct
-    Point(x=W * 0.65, y=H * 0.5, diameter=80),            # 80px absolute
+    Point(x=W * 0.15, y=H * 0.5),  # heatmapper default (50px)
+    Point(x=W * 0.4, y=H * 0.5, diameter_pct=0.20),  # 20% pct
+    Point(x=W * 0.65, y=H * 0.5, diameter=80),  # 80px absolute
     Point(x=W * 0.85, y=H * 0.5, diameter=30, strength=1.0),  # absolute + custom strength
 ]
-p8 = labelled(hm.heatmap(W, H, mixed_points), "mixed | default / pct / px / px+strength")
+p8 = labelled(hm.heatmap(W, H, mixed_points), "mixed | hm-default / pct / px / px+strength")
 
 row1 = np.hstack([p1, p2, p3, p4])
 row2 = np.hstack([p5, p6, p7, p8])
