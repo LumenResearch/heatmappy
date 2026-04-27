@@ -2,6 +2,8 @@
 
 Draw image and video heatmaps in Python using OpenCV.
 
+![colour and reveal modes](docs/colour_and_reveal.jpg)
+
 ---
 
 ## Install
@@ -78,7 +80,7 @@ Heatmapper(
     ceiling=None,             # required for absolute normalisation
     min_intensity=0.0,        # floor intensity for non-zero pixels (0–1)
     mode="colour",            # "colour" | "reveal" | "pair"
-    colormap="jet",           # jet | hot | inferno | plasma | viridis | turbo | bone
+    colormap="jet",           # see Colormaps section below
     opacity=0.65,             # max heatmap opacity in colour mode (0–1)
 )
 ```
@@ -90,6 +92,33 @@ Heatmapper(
 | `"colour"` | Colourised heatmap blended over the base image |
 | `"reveal"` | Base image revealed only where attention is high |
 | `"pair"` | Colour and reveal side by side (double width) |
+
+### Colormaps
+
+Two families of colormaps are available. Both are passed as the `colormap` string argument.
+
+**Built-in (OpenCV):**
+
+| Name | Character |
+|------|-----------|
+| `"jet"` | Blue → cyan → green → yellow → red (default) |
+| `"hot"` | Black → red → orange → yellow → white |
+| `"inferno"` | Black → purple → orange → yellow |
+| `"plasma"` | Blue → purple → orange → yellow |
+| `"viridis"` | Purple → blue → green → yellow |
+| `"turbo"` | Blue → green → yellow → red (perceptually smoother than jet) |
+| `"bone"` | Greyscale with a blue tint |
+
+**Custom (ported from v1):**
+
+| Name | Character |
+|------|-----------|
+| `"classic"` | Red (dense) → green → blue (sparse) — the original heatmappy look |
+
+![colormap comparison](docs/colormaps.jpg)
+
+> **Note:** In v1 the reveal effect was a colormap that relied on PNG alpha transparency. In v2 it is
+> a first-class `mode="reveal"` that composites directly and produces cleaner results.
 
 ### Normalisation
 
@@ -180,11 +209,12 @@ kernel = k.get(diameter=101, strength=0.8, sigma=20)  # float32 numpy array
 Example scripts are in [`examples/`](examples/). Run them from the repo root:
 
 ```bash
-python heatmappy_v2/examples/01_kernel_preview.py
-python heatmappy_v2/examples/02_grey_heatmap.py
-python heatmappy_v2/examples/03_colour_and_reveal.py
-python heatmappy_v2/examples/04_video_on_image.py
-python heatmappy_v2/examples/05_video_on_video.py
+python heatmappy_v2/examples/01_kernel_preview.py   # kernel shapes and sigma comparison
+python heatmappy_v2/examples/02_grey_heatmap.py     # greyscale heatmap output
+python heatmappy_v2/examples/03_colour_and_reveal.py # colour and reveal modes on a still image
+python heatmappy_v2/examples/04_video_on_image.py   # video heatmap over a static image
+python heatmappy_v2/examples/05_video_on_video.py   # video heatmap over a video with audio
+python heatmappy_v2/examples/06_colormaps.py        # all colormaps side by side
 ```
 
 Outputs are written to `examples/output/`.

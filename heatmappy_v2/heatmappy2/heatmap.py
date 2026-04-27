@@ -6,10 +6,14 @@ from typing import Literal
 import cv2
 import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 
 from heatmappy2.kernels import GaussianKernel
 
+_ASSETS = Path(__file__).parent / "assets"
+
+# Built-in OpenCV colormaps
 COLORMAPS: dict[str, int] = {
     "jet": cv2.COLORMAP_JET,
     "hot": cv2.COLORMAP_HOT,
@@ -20,9 +24,29 @@ COLORMAPS: dict[str, int] = {
     "bone": cv2.COLORMAP_BONE,
 }
 
+# Custom LUT colormaps loaded from horizontal PNG strips.
+# Keys can be passed as the `colormap` argument just like built-in names.
+# Note: v1's "reveal" colormap worked through PNG alpha and does not port to an RGB LUT.
+# Use mode="reveal" instead — it achieves the same effect via direct compositing.
+CUSTOM_COLORMAPS: dict[str, Path] = {
+    "classic": _ASSETS / "classic.png",   # v1 "default" — red → green → blue
+}
+
+ALL_COLORMAPS = list(COLORMAPS) + list(CUSTOM_COLORMAPS)
+
 NormalisationMode = Literal["relative", "absolute", "raw"]
 HeatmapMode = Literal["colour", "reveal", "pair"]
 PointList = list["Point"]
+
+
+def _lut_from_strip(img_path: Path, reverse: bool = False) -> NDArray[np.uint8]:
+    """Load a horizontal colormap strip PNG as a (256, 3) BGR uint8 LUT."""
+    img = Image.open(img_path).convert("RGB").resize((256, 1), Image.Resampling.LANCZOS)
+    arr = np.array(img, dtype=np.uint8)[0]  # (256, 3) RGB
+    lut: NDArray[np.uint8] = arr[:, ::-1]   # → BGR
+    if reverse:
+        lut = lut[::-1].copy()
+    return lut
 
 
 class Point(BaseModel):
@@ -180,7 +204,8 @@ class Heatmapper:
         """
         :param mode: 'colour' overlays a colourised heatmap; 'reveal' shows the image
                      only where attention is high, darkening unattended areas
-        :param colormap: one of: jet, hot, inferno, plasma, viridis, turbo, bone
+        :param colormap: built-in: jet, hot, inferno, plasma, viridis, turbo, bone;
+                         custom: classic (v1 red→green→blue), reveal_lut (v1 transparency mask)
         :param opacity: max heatmap opacity (0–1), colour mode only
         """
         self._grey = GreyHeatmapper(
@@ -194,9 +219,15 @@ class Heatmapper:
         self.mode: HeatmapMode = mode
         self.opacity: float = opacity
 
-        if colormap not in COLORMAPS:
-            raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {list(COLORMAPS)}")
-        self.colormap: int = COLORMAPS[colormap]
+        if colormap in COLORMAPS:
+            self._colormap_id: int | None = COLORMAPS[colormap]
+            self._colormap_lut: NDArray[np.uint8] | None = None
+        elif colormap in CUSTOM_COLORMAPS:
+            self._colormap_id = None
+            # v1 strips are indexed dense→0, sparse→255; v2 is the opposite, so reverse
+            self._colormap_lut = _lut_from_strip(CUSTOM_COLORMAPS[colormap], reverse=True)
+        else:
+            raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {ALL_COLORMAPS}")
 
     def output_shape(self, height: int, width: int) -> tuple[int, int]:
         """Return (out_height, out_width) for a source frame of the given size."""
@@ -249,7 +280,10 @@ class Heatmapper:
         grey: NDArray[np.uint8],
         base_img: NDArray[np.uint8] | None,
     ) -> NDArray[np.uint8]:
-        coloured: NDArray[np.uint8] = cv2.applyColorMap(grey, self.colormap)  # type: ignore[assignment]
+        if self._colormap_lut is not None:
+            coloured: NDArray[np.uint8] = self._colormap_lut[grey]
+        else:
+            coloured = cv2.applyColorMap(grey, self._colormap_id)  # type: ignore[arg-type,assignment]
         if base_img is None:
             return coloured
         alpha = (grey / 255.0 * self.opacity)[:, :, np.newaxis]
