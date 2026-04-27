@@ -4,6 +4,8 @@ Draw image and video heatmaps in Python using OpenCV.
 
 ![colour and reveal modes](docs/colour_and_reveal.jpg)
 
+https://github.com/LumenResearch/heatmappy/blob/feat/v2/heatmappy_v2/docs/heatmap_grid.mp4
+
 ---
 
 ## Install
