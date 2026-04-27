@@ -1,12 +1,12 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "heatmappy2"
 version = "0.1.0"
 description = "Draw image and video heatmaps in python"
-authors = [{ name = "Lumen Research", email = "development@lumen-research.com" }]
+authors = [{ name = "Lumen Research", email = "developer@lumen-research.com" }]
 requires-python = ">=3.11"
 keywords = ["image", "video", "heatmap", "heat map", "opencv"]
 classifiers = ["Programming Language :: Python :: 3"]
