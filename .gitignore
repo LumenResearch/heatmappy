@@ -8,6 +8,9 @@
 *.png
 *.json
 
+# Example assets that should be tracked despite the above rules
+!heatmappy_v2/examples/SampleVideo_720x480_1mb.mp4
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
