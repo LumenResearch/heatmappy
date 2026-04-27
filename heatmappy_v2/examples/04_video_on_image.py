@@ -35,6 +35,9 @@ from heatmappy2.video import VideoHeatmapper, VideoPoint
 random.seed(7)
 
 EXAMPLES_DIR = os.path.dirname(__file__)
+OUTPUT_DIR = os.path.join(EXAMPLES_DIR, "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 CAT_PATH = os.path.join(EXAMPLES_DIR, "cat.jpg")
 
 DURATION_MS = 20_000.0
@@ -101,7 +104,7 @@ for prefix, hm in [
     VideoHeatmapper(hm).heatmap_on_image(
         img,
         gaze_points,
-        os.path.join(EXAMPLES_DIR, f"{prefix}_no_decay.mp4"),
+        os.path.join(OUTPUT_DIR, f"{prefix}_no_decay.mp4"),
         duration_ms=DURATION_MS,
         fps=FPS,
     )
@@ -111,7 +114,7 @@ for prefix, hm in [
     VideoHeatmapper(hm, decay_time_ms=DECAY_MS).heatmap_on_image(
         img,
         gaze_points,
-        os.path.join(EXAMPLES_DIR, f"{prefix}_hard_decay.mp4"),
+        os.path.join(OUTPUT_DIR, f"{prefix}_hard_decay.mp4"),
         duration_ms=DURATION_MS,
         fps=FPS,
     )
@@ -121,7 +124,7 @@ for prefix, hm in [
     VideoHeatmapper(hm, decay_time_ms=DECAY_MS, smooth_decay=True).heatmap_on_image(
         img,
         gaze_points,
-        os.path.join(EXAMPLES_DIR, f"{prefix}_smooth_decay.mp4"),
+        os.path.join(OUTPUT_DIR, f"{prefix}_smooth_decay.mp4"),
         duration_ms=DURATION_MS,
         fps=FPS,
     )
@@ -135,7 +138,7 @@ for prefix, hm in [
 VideoHeatmapper(colour_heatmapper, decay_time_ms=DECAY_MS, smooth_decay=True).heatmap_on_image(
     img,
     gaze_points,
-    os.path.join(EXAMPLES_DIR, "04_windowed_clip.mp4"),
+    os.path.join(OUTPUT_DIR, "04_windowed_clip.mp4"),
     duration_ms=DURATION_MS,
     fps=FPS,
     start_ms=5_000.0,
@@ -163,7 +166,7 @@ def stitch_grid(
     n_cols: int,
     n_rows: int,
 ) -> None:
-    caps = [cv2.VideoCapture(os.path.join(EXAMPLES_DIR, p)) for p, _, _ in cells]
+    caps = [cv2.VideoCapture(os.path.join(OUTPUT_DIR, p)) for p, _, _ in cells]
     fps_out = caps[0].get(cv2.CAP_PROP_FPS)
     cell_w = int(caps[0].get(cv2.CAP_PROP_FRAME_WIDTH))
     cell_h = int(caps[0].get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -217,7 +220,7 @@ def stitch_grid(
 
 stitch_grid(
     GRID_CELLS,
-    os.path.join(EXAMPLES_DIR, "04_grid.mp4"),
+    os.path.join(OUTPUT_DIR, "04_grid.mp4"),
     n_cols=GRID_COLS,
     n_rows=GRID_ROWS,
 )
