@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heatmappy2"
-version = "0.1.0"
+version = "2.0.0"
 description = "Draw image and video heatmaps in python"
 authors = [{ name = "Lumen Research", email = "developer@lumen-research.com" }]
 requires-python = ">=3.11"
