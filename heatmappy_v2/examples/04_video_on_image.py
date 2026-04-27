@@ -37,7 +37,7 @@ random.seed(7)
 EXAMPLES_DIR = os.path.dirname(__file__)
 CAT_PATH = os.path.join(EXAMPLES_DIR, "cat.jpg")
 
-DURATION_MS = 5_000.0
+DURATION_MS = 20_000.0
 FPS = 20.0
 
 
