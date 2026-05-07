@@ -125,3 +125,4 @@ def render_batch(prefix: str, diameter_pct: float) -> None:
 
 render_batch("07_d20", diameter_pct=0.20)
 render_batch("07_d30", diameter_pct=0.30)
+render_batch("07_d50", diameter_pct=0.50)
