@@ -225,3 +225,23 @@ stitch_grid(
     n_rows=GRID_ROWS,
 )
 print("Saved: 05_grid.mp4")
+
+# --------------------------------------------------------------------------- option grid
+# Same layout but columns labelled Option 1 / 2 / 3 instead of decay mode names.
+
+OPTION_GRID_CELLS = [
+    ("05a_colour_no_decay.mp4", "option 1", "colour"),
+    ("05a_colour_hard_decay.mp4", "option 2", "colour"),
+    ("05a_colour_smooth_decay.mp4", "option 3", "colour"),
+    ("05d_reveal_no_decay.mp4", "option 1", "reveal"),
+    ("05d_reveal_hard_decay.mp4", "option 2", "reveal"),
+    ("05d_reveal_smooth_decay.mp4", "option 3", "reveal"),
+]
+
+stitch_grid(
+    OPTION_GRID_CELLS,
+    os.path.join(OUTPUT_DIR, "05_option_grid.mp4"),
+    n_cols=GRID_COLS,
+    n_rows=GRID_ROWS,
+)
+print("Saved: 05_option_grid.mp4")
