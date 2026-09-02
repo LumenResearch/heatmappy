@@ -1,8 +1,9 @@
 from collections import defaultdict
 import random
 from functools import lru_cache
+import os
 
-from moviepy.editor import *
+from moviepy import *
 import numpy as np
 from PIL import Image
 from moviepy.video.VideoClip import DataVideoClip
@@ -49,7 +50,7 @@ class VideoHeatmapper:
         points = list(points)
         if not duration_s:
             duration_s = max(t for x, y, t in points) / 1000
-        base_video = ImageClip(base_img).set_duration(duration_s)
+        base_video = ImageClip(base_img).with_duration(duration_s)
 
         return self.heatmap_on_video(
             base_video, points,
@@ -115,11 +116,12 @@ class VideoHeatmapper:
             clip_data = range(clip_start_frame_index, frame_index + 1)
             clip = DataVideoClip(clip_data,
                                  lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, :3], fps)
-            clip.mask = DataVideoClip(clip_data,
-                                      lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, 3] * (1 / 255),
-                                      fps, ismask=True)
+            mask = DataVideoClip(clip_data,
+                                 lambda x: np.array(self._heatmap_cache(width, height, x))[:, :, 3] * (1 / 255),
+                                 fps, is_mask=True)
+            clip = clip.with_mask(mask)
             clip_start_frame_index = frame_index
-            yield clip.set_start(clip_start_ms / 1000)
+            yield clip.with_start(clip_start_ms / 1000)
 
     def _heatmap_frames(self, width, height, frame_points):
         for frame_start, points in frame_points.items():
@@ -131,8 +133,8 @@ class VideoHeatmapper:
         interval = 1000 // fps
         for frame_start, heat in heatmap_frames:
             yield (ImageClip(heat)
-                   .set_start(frame_start / 1000)
-                   .set_duration(interval / 1000))
+                   .with_start(frame_start / 1000)
+                   .with_duration(interval / 1000))
 
 
 def _example_random_points():
@@ -142,8 +144,24 @@ def _example_random_points():
     return (rand_point(720, 480, 40000) for _ in range(500))
 
 
+def _example_user_points(num_users, width, height, duration_ms, fps=20):
+    interval = 1000 // fps
+    cx, cy = width / 2, height / 2
+    std_x, std_y = width / 6, height / 6
+
+    for frame_t in range(0, duration_ms + 1, interval):
+        for _ in range(num_users):
+            x = int(random.gauss(cx, std_x))
+            y = int(random.gauss(cy, std_y))
+            x = max(0, min(width, x))
+            y = max(0, min(height, y))
+            yield x, y, frame_t
+
+
 def main():
-    example_base_img = os.path.join('assets', 'cat.jpg')
+    assets = os.path.join(os.path.dirname(__file__), 'assets')
+    example_base_img = os.path.join(assets, 'cat.jpg')
+    example_base_video = os.path.join(assets, 'SampleVideo_720x480_1mb.mp4')
 
     img_heatmapper = Heatmapper(colours='default', point_strength=0.6)
     video_heatmapper = VideoHeatmapper(img_heatmapper)
@@ -154,8 +172,16 @@ def main():
         duration_s=40,
         keep_heat=True
     )
-
     heatmap_video.write_videofile('out_on_image.mp4', bitrate="5000k", fps=24)
+
+    base = VideoFileClip(example_base_video)
+    heatmap_video = video_heatmapper.heatmap_on_video(
+        base_video=base,
+        points=_example_user_points(10, 640, 480, int(base.duration * 1000)),
+        heat_fps=20,
+        keep_heat=True,
+    )
+    heatmap_video.write_videofile('out_on_video.mp4', bitrate="5000k", fps=24)
 
 
 if __name__ == '__main__':

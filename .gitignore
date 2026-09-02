@@ -1,6 +1,13 @@
 
 # Created by https://www.gitignore.io/api/python,pycharm
 
+### Project ###
+.env
+.vscode/
+*.mp4
+*.png
+*.json
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
